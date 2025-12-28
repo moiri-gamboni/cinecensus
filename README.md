@@ -35,21 +35,20 @@ Sign up at [omdbapi.com/apikey.aspx](https://www.omdbapi.com/apikey.aspx) (free 
 
 ### 4. Configure environment
 
-For local development, create `.env`:
+For local development, create `.dev.vars`:
 
-```env
+```
 PUBLIC_SUPABASE_URL=https://your-project.supabase.co
 PUBLIC_SUPABASE_ANON_KEY=your-anon-key
 OMDB_API_KEY=your-omdb-key
 ```
 
-For Cloudflare Workers, add to `wrangler.toml`:
+For production, set secrets via Cloudflare (not in wrangler.toml):
 
-```toml
-[vars]
-PUBLIC_SUPABASE_URL = "https://your-project.supabase.co"
-PUBLIC_SUPABASE_ANON_KEY = "your-anon-key"
-OMDB_API_KEY = "your-omdb-key"
+```bash
+npx wrangler secret put PUBLIC_SUPABASE_URL
+npx wrangler secret put PUBLIC_SUPABASE_ANON_KEY
+npx wrangler secret put OMDB_API_KEY
 ```
 
 ### 5. Run locally
