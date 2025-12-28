@@ -51,7 +51,6 @@
 	"dependencies": {
 		"@neodrag/svelte": "^2.3.3",
 		"@supabase/supabase-js": "^2.89.0",
-		"mode-watcher": "^1.1.0",
-		"nanoid": "^5.1.6"
+		"mode-watcher": "^1.1.0"
 	}
 }
