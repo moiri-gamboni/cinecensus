@@ -1,0 +1,187 @@
+<script lang="ts">
+	import { enhance } from '$app/forms';
+	import { goto } from '$app/navigation';
+	import { toast } from 'svelte-sonner';
+	import { page } from '$app/state';
+	import Loader2 from '@lucide/svelte/icons/loader-2';
+	import Vote from '@lucide/svelte/icons/vote';
+	import Share2 from '@lucide/svelte/icons/share-2';
+	import Check from '@lucide/svelte/icons/check';
+	import { Button } from '$lib/components/ui/button/index.js';
+	import { Badge } from '$lib/components/ui/badge/index.js';
+	import * as Card from '$lib/components/ui/card/index.js';
+	import { ApprovalVoting, SingleVoting, RankedVoting, RatingVoting } from '$lib/components/voting/index.js';
+	import { votedPolls } from '$lib/stores/poll-ownership.svelte.js';
+	import type { ApprovalVoteData, SingleVoteData, RankedVoteData, RatingVoteData } from '$lib/types/poll';
+
+	let { data } = $props();
+
+	let submitting = $state(false);
+	let copied = $state(false);
+
+	// Vote data for each voting method
+	let approvalVote = $state<ApprovalVoteData>([]);
+	let singleVote = $state<SingleVoteData>('');
+	let rankedVote = $state<RankedVoteData>([]);
+	let ratingVote = $state<RatingVoteData>({});
+
+	const currentVoteData = $derived.by(() => {
+		switch (data.poll.voting_method) {
+			case 'approval':
+				return approvalVote;
+			case 'single':
+				return singleVote;
+			case 'ranked':
+				return rankedVote;
+			case 'rating':
+				return ratingVote;
+		}
+	});
+
+	const isValidVote = $derived.by(() => {
+		switch (data.poll.voting_method) {
+			case 'approval':
+				return approvalVote.length > 0;
+			case 'single':
+				return singleVote !== '';
+			case 'ranked':
+				return rankedVote.length === data.poll.movies.length;
+			case 'rating':
+				return Object.keys(ratingVote).length === data.poll.movies.length;
+		}
+	});
+
+	const methodLabels = {
+		approval: 'Approval Voting',
+		single: 'Single Vote',
+		ranked: 'Ranked Choice',
+		rating: 'Rating'
+	};
+
+	async function copyLink() {
+		await navigator.clipboard.writeText(window.location.href);
+		copied = true;
+		toast.success('Link copied to clipboard!');
+		setTimeout(() => (copied = false), 2000);
+	}
+
+	// If already voted, redirect to results
+	$effect(() => {
+		if (data.hasVoted || votedPolls.hasVoted(data.poll.id)) {
+			goto(`/poll/${data.poll.id}/results`);
+		}
+	});
+</script>
+
+<svelte:head>
+	<title>{data.poll.title} - CineCensus</title>
+</svelte:head>
+
+<div class="space-y-6">
+	<div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+		<div>
+			<h1 class="text-2xl font-bold tracking-tight sm:text-3xl">{data.poll.title}</h1>
+			<div class="mt-2 flex items-center gap-2">
+				<Badge variant="secondary">{methodLabels[data.poll.voting_method]}</Badge>
+				<span class="text-sm text-muted-foreground">
+					{data.poll.movies.length} movies
+				</span>
+			</div>
+		</div>
+
+		<Button variant="outline" onclick={copyLink}>
+			{#if copied}
+				<Check class="mr-2 size-4" />
+				Copied!
+			{:else}
+				<Share2 class="mr-2 size-4" />
+				Share poll
+			{/if}
+		</Button>
+	</div>
+
+	<Card.Root>
+		<Card.Header>
+			<Card.Title>Cast your vote</Card.Title>
+			<Card.Description>
+				{#if data.poll.voting_method === 'approval'}
+					Vote for all movies you'd be happy to watch
+				{:else if data.poll.voting_method === 'single'}
+					Pick your one favorite
+				{:else if data.poll.voting_method === 'ranked'}
+					Rank movies from most to least preferred
+				{:else}
+					Rate each movie from 1 to 5 stars
+				{/if}
+			</Card.Description>
+		</Card.Header>
+
+		<Card.Content>
+			{#if data.poll.voting_method === 'approval'}
+				<ApprovalVoting
+					movies={data.poll.movies}
+					value={approvalVote}
+					onchange={(v) => (approvalVote = v)}
+					disabled={submitting}
+				/>
+			{:else if data.poll.voting_method === 'single'}
+				<SingleVoting
+					movies={data.poll.movies}
+					value={singleVote}
+					onchange={(v) => (singleVote = v)}
+					disabled={submitting}
+				/>
+			{:else if data.poll.voting_method === 'ranked'}
+				<RankedVoting
+					movies={data.poll.movies}
+					value={rankedVote}
+					onchange={(v) => (rankedVote = v)}
+					disabled={submitting}
+				/>
+			{:else}
+				<RatingVoting
+					movies={data.poll.movies}
+					value={ratingVote}
+					onchange={(v) => (ratingVote = v)}
+					disabled={submitting}
+				/>
+			{/if}
+		</Card.Content>
+
+		<Card.Footer>
+			<form
+				method="POST"
+				action="?/vote"
+				class="w-full"
+				use:enhance={() => {
+					submitting = true;
+					return async ({ result }) => {
+						submitting = false;
+						if (result.type === 'redirect') {
+							votedPolls.add(data.poll.id);
+							goto(result.location);
+						} else if (result.type === 'error') {
+							toast.error(result.error?.message || 'Failed to submit vote');
+						}
+					};
+				}}
+			>
+				<input type="hidden" name="voteData" value={JSON.stringify(currentVoteData)} />
+				<Button
+					type="submit"
+					class="w-full"
+					size="lg"
+					disabled={submitting || !isValidVote}
+				>
+					{#if submitting}
+						<Loader2 class="mr-2 size-5 animate-spin" />
+						Submitting...
+					{:else}
+						<Vote class="mr-2 size-5" />
+						Submit vote
+					{/if}
+				</Button>
+			</form>
+		</Card.Footer>
+	</Card.Root>
+</div>
