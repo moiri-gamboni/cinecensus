@@ -36,7 +36,10 @@
 		}
 
 		console.log(`[Search] Input: "${query}"`);
-		indexLoading = true;
+		// Only show loading if we have no results yet
+		if (results.length === 0) {
+			indexLoading = true;
+		}
 		error = null;
 
 		try {
@@ -60,7 +63,7 @@
 		} catch (err) {
 			console.error('[Search] Local search error:', err);
 			// Fallback: the poster fetch will also do OMDb search
-			results = [];
+			// Don't clear results - keep showing previous ones
 		} finally {
 			indexLoading = false;
 		}
