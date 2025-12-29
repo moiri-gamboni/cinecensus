@@ -9,7 +9,7 @@
 	import { Button } from '$lib/components/ui/button/index.js';
 	import type { Movie } from '$lib/types/poll';
 	import { searchLocalTitles, toMovieWithRating, type MovieWithRating } from '$lib/utils/movie-search';
-	import { fetchPostersAndMerge, resetQueryCache } from '$lib/utils/poster-fetch';
+	import { fetchPostersAndMerge, resetQueryCache, getCachedPoster } from '$lib/utils/poster-fetch';
 
 	interface Props {
 		onselect: (movie: Movie) => void;
@@ -28,23 +28,42 @@
 	let triggerRef = $state<HTMLButtonElement>(null!);
 	let posterDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 
+	let currentQuery = $state(''); // Track the current query to avoid stale updates
+
 	// Immediately search local index (no debounce)
 	async function searchLocal(query: string) {
+		currentQuery = query; // Track current query for stale detection
+
 		if (query.length < 2) {
 			results = [];
 			error = null;
 			return;
 		}
 
+		console.log(`[Search] Input: "${query}"`);
 		indexLoading = true;
 		error = null;
 
 		try {
 			const titles = await searchLocalTitles(query, 20);
 			const movies = titles.map(toMovieWithRating);
-			results = movies.filter((m) => !excludeIds.includes(m.imdbID));
+
+			// Don't update if query changed during search
+			if (query !== currentQuery) {
+				console.log(`[Search] Discarding stale local results for "${query}" (current: "${currentQuery}")`);
+				return;
+			}
+
+			// Apply cached posters immediately (before debounced fetch)
+			const moviesWithCached = movies.map((m) => {
+				const cached = getCachedPoster(m.imdbID);
+				return cached !== undefined ? { ...m, poster: cached } : m;
+			});
+
+			results = moviesWithCached.filter((m) => !excludeIds.includes(m.imdbID));
+			console.log(`[Search] Showing ${results.length} results (excluded ${movies.length - results.length})`);
 		} catch (err) {
-			console.error('Local search error:', err);
+			console.error('[Search] Local search error:', err);
 			// Fallback: the poster fetch will also do OMDb search
 			results = [];
 		} finally {
@@ -57,16 +76,31 @@
 
 	function schedulePosterFetch(query: string) {
 		if (posterDebounceTimer) clearTimeout(posterDebounceTimer);
+		console.log(`[Search] Scheduling poster fetch in 500ms for "${query}"`);
+		fetchingPosters = true; // Show loaders immediately while waiting
 		posterDebounceTimer = setTimeout(() => fetchPosters(query), 500);
 	}
 
 	async function fetchPosters(query: string) {
 		if (query.length < 2) return;
 
-		fetchingPosters = true;
+		// Don't fetch if query has changed (user typed something else)
+		if (query !== currentQuery) {
+			console.log(`[Search] Skipping stale poster fetch for "${query}" (current: "${currentQuery}")`);
+			return;
+		}
+
+		console.log(`[Search] Starting poster fetch for "${query}"`);
+		// fetchingPosters already true from schedulePosterFetch
 
 		try {
 			const { movies, newFromOMDb } = await fetchPostersAndMerge(results, query);
+
+			// Don't update if query changed during fetch
+			if (query !== currentQuery) {
+				console.log(`[Search] Discarding stale poster results for "${query}" (current: "${currentQuery}")`);
+				return;
+			}
 
 			// Update existing results with posters
 			results = movies;
@@ -78,13 +112,17 @@
 				const filtered = newFromOMDb.filter(
 					(m) => !existingIds.has(m.imdbID) && !excludeIds.includes(m.imdbID)
 				);
-				results = [...results, ...filtered];
+				if (filtered.length > 0) {
+					console.log(`[Search] Adding ${filtered.length} new movies from OMDb`);
+					results = [...results, ...filtered];
+				}
 			}
 		} catch (err) {
-			console.error('Poster fetch error:', err);
+			console.error('[Search] Poster fetch error:', err);
 			// Non-fatal - we still have local results
 		} finally {
 			fetchingPosters = false;
+			console.log(`[Search] Poster fetch complete, ${results.length} total results`);
 		}
 	}
 
@@ -164,21 +202,24 @@
 								onSelect={() => handleSelect(movie)}
 								class="flex items-center gap-3 py-2"
 							>
-								{#if movie.poster}
-									<img
-										src={movie.poster}
-										alt={movie.title}
-										class="h-12 w-8 rounded object-cover"
-									/>
-								{:else if fetchingPosters}
-									<div class="flex h-12 w-8 items-center justify-center rounded bg-muted">
-										<Loader2 class="size-4 animate-spin text-muted-foreground" />
-									</div>
-								{:else}
-									<div class="flex h-12 w-8 items-center justify-center rounded bg-muted text-xs text-muted-foreground">
+								<div class="relative flex h-12 w-8 items-center justify-center rounded bg-muted text-xs text-muted-foreground">
+									<!-- Fallback content (shown if no poster or image fails to load) -->
+									{#if fetchingPosters && !movie.poster}
+										<Loader2 class="size-4 animate-spin" />
+									{:else}
 										N/A
-									</div>
-								{/if}
+									{/if}
+
+									<!-- Image overlays on top, removes itself on error -->
+									{#if movie.poster}
+										<img
+											src={movie.poster}
+											alt={movie.title}
+											class="absolute inset-0 h-full w-full rounded object-cover"
+											onerror={(e) => e.currentTarget.remove()}
+										/>
+									{/if}
+								</div>
 								<div class="flex min-w-0 flex-1 flex-col">
 									<span class="truncate font-medium">{movie.title}</span>
 									<div class="flex items-center gap-2 text-sm text-muted-foreground">

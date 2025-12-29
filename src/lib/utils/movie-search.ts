@@ -7,7 +7,7 @@ let fuseInstance: Fuse<IMDbTitle> | null = null;
 
 const FUSE_OPTIONS: IFuseOptions<IMDbTitle> = {
 	keys: ['t'], // Search primaryTitle
-	threshold: 0.3, // Fuzzy tolerance (0=exact, 1=match anything)
+	threshold: 0.15, // Fuzzy tolerance (0=exact, 1=match anything)
 	distance: 100, // Character distance for fuzzy match
 	minMatchCharLength: 2,
 	includeScore: true
@@ -49,9 +49,21 @@ async function getFuse(): Promise<Fuse<IMDbTitle>> {
 export async function searchLocalTitles(query: string, limit = 20): Promise<IMDbTitle[]> {
 	if (query.length < 2) return [];
 
+	const start = performance.now();
 	const fuse = await getFuse();
+	const indexTime = performance.now() - start;
+
+	const searchStart = performance.now();
 	const results = fuse.search(query, { limit });
-	return results.map((r) => r.item);
+	const searchTime = performance.now() - searchStart;
+
+	const items = results.map((r) => r.item);
+	console.log(
+		`[Fuse] "${query}" → ${results.length} results (index: ${indexTime.toFixed(0)}ms, search: ${searchTime.toFixed(1)}ms)`,
+		items.map((t) => `tt${t.id} ${t.t} (${t.y}) [${t.ty}] ⭐${t.r}`)
+	);
+
+	return items;
 }
 
 /**

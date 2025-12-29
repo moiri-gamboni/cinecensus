@@ -66,10 +66,18 @@ function extractWords(title: string): string[] {
 }
 
 /**
+ * Check if a query is meaningful (not just stop words).
+ */
+function isValidSearchQuery(query: string): boolean {
+	const words = extractWords(query);
+	return words.length > 0;
+}
+
+/**
  * Find minimum set of search terms to cover all movies.
  * Uses a greedy set cover algorithm.
  */
-export function findOptimalSearchTerms(movies: MovieWithRating[], maxTerms = 3): string[] {
+export function findOptimalSearchTerms(movies: MovieWithRating[]): string[] {
 	if (movies.length === 0) return [];
 
 	// Build word -> movies index
@@ -87,8 +95,8 @@ export function findOptimalSearchTerms(movies: MovieWithRating[], maxTerms = 3):
 	const uncovered = new Set(movies.map((m) => m.imdbID));
 	const selectedTerms: string[] = [];
 
-	// Greedy: pick word that covers most uncovered movies
-	while (uncovered.size > 0 && selectedTerms.length < maxTerms) {
+	// Greedy: pick word that covers most uncovered movies until all covered
+	while (uncovered.size > 0) {
 		let bestWord = '';
 		let bestCoverage = 0;
 
@@ -100,13 +108,17 @@ export function findOptimalSearchTerms(movies: MovieWithRating[], maxTerms = 3):
 			}
 		}
 
-		if (bestCoverage === 0) break;
+		if (bestCoverage === 0) break; // No more words can cover remaining movies
 
 		selectedTerms.push(bestWord);
 		for (const id of wordToMovies.get(bestWord)!) {
 			uncovered.delete(id);
 		}
 	}
+
+	console.log(
+		`[Poster] Optimal terms for ${movies.length} movies: [${selectedTerms.join(', ')}] (${uncovered.size} uncovered)`
+	);
 
 	return selectedTerms;
 }
@@ -115,10 +127,19 @@ export function findOptimalSearchTerms(movies: MovieWithRating[], maxTerms = 3):
  * Fetch movies from OMDb API.
  */
 async function fetchOMDb(query: string): Promise<OMDbSearchResult> {
+	console.log(`[OMDb] Fetching "${query}"...`);
+	const start = performance.now();
 	try {
 		const response = await fetch(`/api/movies?q=${encodeURIComponent(query)}`);
-		return await response.json();
-	} catch {
+		const result = await response.json();
+		const time = performance.now() - start;
+		console.log(
+			`[OMDb] "${query}" → ${result.results?.length ?? 0} results (${time.toFixed(0)}ms)${result.error ? ` ERROR: ${result.error}` : ''}`,
+			result.results?.map((m: Movie) => `${m.imdbID} ${m.title} (${m.year}) ${m.poster ? '🖼️' : '❌'}`)
+		);
+		return result;
+	} catch (err) {
+		console.error(`[OMDb] "${query}" failed:`, err);
 		return { results: [], error: 'Failed to fetch' };
 	}
 }
@@ -129,46 +150,80 @@ async function fetchOMDb(query: string): Promise<OMDbSearchResult> {
  */
 export async function fetchPostersAndMerge(
 	localMovies: MovieWithRating[],
-	originalQuery: string
+	originalQuery: string,
+	visibleCount = 10
 ): Promise<{
 	movies: MovieWithRating[];
 	newFromOMDb: MovieWithRating[];
 }> {
-	// First, apply any cached posters
+	console.log(
+		`[Poster] Starting fetch for ${localMovies.length} local movies (visible: ${visibleCount}), query="${originalQuery}"`,
+		localMovies.slice(0, visibleCount).map((m) => `${m.imdbID} ${m.title} (${m.year})`)
+	);
+
+	// First, apply any cached posters to ALL movies
 	const moviesWithCached = localMovies.map((m) => {
 		const cached = getCachedPoster(m.imdbID);
 		return cached !== undefined ? { ...m, poster: cached } : m;
 	});
 
-	// Find movies still needing posters
-	const needPosters = moviesWithCached.filter((m) => m.poster === null);
+	const cachedCount = moviesWithCached.filter((m) => m.poster !== null).length;
+	const cachedIds = moviesWithCached.filter((m) => m.poster !== null).map((m) => m.imdbID);
+	console.log(`[Poster] ${cachedCount}/${localMovies.length} posters from cache`, cachedIds);
+
+	// Only fetch posters for first N visible movies
+	const visibleMovies = moviesWithCached.slice(0, visibleCount);
+	const needPosters = visibleMovies.filter((m) => m.poster === null);
+
 	if (needPosters.length === 0) {
+		console.log('[Poster] All visible posters cached, skipping OMDb');
 		return { movies: moviesWithCached, newFromOMDb: [] };
 	}
 
-	// Find optimal search terms
+	// Find optimal search terms for visible movies needing posters
 	const searchTerms = findOptimalSearchTerms(needPosters);
 
-	// Also include original query if not covered
-	if (!searchTerms.includes(originalQuery.toLowerCase())) {
-		searchTerms.push(originalQuery);
+	// Also include original query if it's valid (not just stop words) and not already covered
+	if (isValidSearchQuery(originalQuery) && !searchTerms.includes(originalQuery.toLowerCase())) {
+		searchTerms.push(originalQuery.toLowerCase());
 	}
 
 	// Filter out already-queried terms
 	const newTerms = searchTerms.filter((term) => !queriedTerms.has(term.toLowerCase()));
+	const skippedTerms = searchTerms.filter((term) => queriedTerms.has(term.toLowerCase()));
+
+	if (skippedTerms.length > 0) {
+		console.log(`[Poster] Skipping already-queried terms: [${skippedTerms.join(', ')}]`);
+	}
+
+	if (newTerms.length === 0) {
+		console.log('[Poster] No new terms to query');
+		return { movies: moviesWithCached, newFromOMDb: [] };
+	}
+
+	console.log(`[Poster] Fetching ${newTerms.length} OMDb queries: [${newTerms.join(', ')}]`);
 
 	// Fetch from OMDb for each term
-	const allOMDbMovies: Movie[] = [];
 	const omdbById = new Map<string, Movie>();
+	const originalQueryResults: Movie[] = []; // Only results from original query (for freshness)
+	const originalQueryLower = originalQuery.toLowerCase();
 
 	await Promise.all(
 		newTerms.map(async (term) => {
 			queriedTerms.add(term.toLowerCase());
 			const result = await fetchOMDb(term);
 			for (const movie of result.results) {
+				// Cache ALL posters from OMDb (even from poster-fetch queries)
+				if (movie.poster) {
+					cachePoster(movie.imdbID, movie.poster);
+				}
+
 				if (!omdbById.has(movie.imdbID)) {
 					omdbById.set(movie.imdbID, movie);
-					allOMDbMovies.push(movie);
+					// Only track results from original query for "new from OMDb"
+					if (term === originalQueryLower) {
+						originalQueryResults.push(movie);
+					}
 				}
 			}
 		})
@@ -176,20 +231,25 @@ export async function fetchPostersAndMerge(
 
 	// Apply posters to local movies
 	const localIds = new Set(moviesWithCached.map((m) => m.imdbID));
+	const postersApplied: string[] = [];
+	const postersMissing: string[] = [];
 	const updatedMovies = moviesWithCached.map((m) => {
 		if (m.poster === null) {
 			const omdb = omdbById.get(m.imdbID);
 			if (omdb?.poster) {
 				cachePoster(m.imdbID, omdb.poster);
+				postersApplied.push(`${m.imdbID} ${m.title}`);
 				return { ...m, poster: omdb.poster };
+			} else {
+				postersMissing.push(`${m.imdbID} ${m.title}`);
 			}
 		}
 		return m;
 	});
 
-	// Find new movies from OMDb not in local results
+	// Find new movies from OMDb not in local results (only from original query for relevance)
 	const newFromOMDb: MovieWithRating[] = [];
-	for (const omdbMovie of allOMDbMovies) {
+	for (const omdbMovie of originalQueryResults) {
 		if (!localIds.has(omdbMovie.imdbID)) {
 			cachePoster(omdbMovie.imdbID, omdbMovie.poster);
 			newFromOMDb.push({
@@ -197,6 +257,17 @@ export async function fetchPostersAndMerge(
 				rating: undefined // OMDb search doesn't return ratings
 			});
 		}
+	}
+
+	console.log(`[Poster] Applied ${postersApplied.length} posters:`, postersApplied);
+	if (postersMissing.length > 0) {
+		console.log(`[Poster] Missing ${postersMissing.length} posters (not in OMDb results):`, postersMissing);
+	}
+	if (newFromOMDb.length > 0) {
+		console.log(
+			`[Poster] New from OMDb (${newFromOMDb.length}):`,
+			newFromOMDb.map((m) => `${m.imdbID} ${m.title} (${m.year})`)
+		);
 	}
 
 	return { movies: updatedMovies, newFromOMDb };
