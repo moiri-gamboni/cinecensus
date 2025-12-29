@@ -1,5 +1,4 @@
 <script lang="ts">
-	import Search from '@lucide/svelte/icons/search';
 	import Loader2 from '@lucide/svelte/icons/loader-2';
 	import Star from '@lucide/svelte/icons/star';
 	import * as Command from '$lib/components/ui/command/index.js';
@@ -136,22 +135,18 @@
 </script>
 
 <Command.Root shouldFilter={false} class="rounded-lg border">
-	<div class="flex items-center border-b px-3">
-		<Search class="mr-2 size-4 shrink-0 opacity-50" />
-		<Command.Input
-			placeholder={placeholder}
-			value={searchQuery}
-			oninput={(e) => handleInput(e.currentTarget.value)}
-			onkeydown={(e) => {
-				if (e.key === 'Enter' && results.length > 0) {
-					e.preventDefault();
-					handleSelect(results[0]);
-				}
-			}}
-			class="flex h-10 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
-		/>
-	</div>
-	<Command.List>
+	<Command.Input
+		placeholder={placeholder}
+		value={searchQuery}
+		oninput={(e) => handleInput(e.currentTarget.value)}
+		onkeydown={(e) => {
+			if (e.key === 'Enter' && results.length > 0) {
+				e.preventDefault();
+				handleSelect(results[0]);
+			}
+		}}
+	/>
+	<Command.List class="empty:hidden">
 		{#if indexLoading}
 			<Command.Loading>
 				<div class="flex items-center justify-center py-6">
@@ -205,10 +200,6 @@
 					</Command.Item>
 				{/each}
 			</Command.Group>
-		{:else}
-			<div class="py-6 text-center text-sm text-muted-foreground">
-				Start typing to search movies
-			</div>
 		{/if}
 	</Command.List>
 </Command.Root>
