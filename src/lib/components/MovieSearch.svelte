@@ -1,14 +1,15 @@
 <script lang="ts">
 	import { tick } from 'svelte';
-	import Check from '@lucide/svelte/icons/check';
 	import ChevronsUpDown from '@lucide/svelte/icons/chevrons-up-down';
 	import Search from '@lucide/svelte/icons/search';
 	import Loader2 from '@lucide/svelte/icons/loader-2';
+	import Star from '@lucide/svelte/icons/star';
 	import * as Command from '$lib/components/ui/command/index.js';
 	import * as Popover from '$lib/components/ui/popover/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
-	import { cn } from '$lib/utils.js';
 	import type { Movie } from '$lib/types/poll';
+	import { searchLocalTitles, toMovieWithRating, type MovieWithRating } from '$lib/utils/movie-search';
+	import { fetchPostersAndMerge, resetQueryCache } from '$lib/utils/poster-fetch';
 
 	interface Props {
 		onselect: (movie: Movie) => void;
@@ -20,62 +21,98 @@
 
 	let open = $state(false);
 	let searchQuery = $state('');
-	let results = $state<Movie[]>([]);
-	let loading = $state(false);
+	let results = $state<MovieWithRating[]>([]);
+	let indexLoading = $state(false);
+	let fetchingPosters = $state(false);
 	let error = $state<string | null>(null);
 	let triggerRef = $state<HTMLButtonElement>(null!);
-	let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+	let posterDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 
-	async function searchMovies(query: string) {
+	// Immediately search local index (no debounce)
+	async function searchLocal(query: string) {
 		if (query.length < 2) {
 			results = [];
 			error = null;
 			return;
 		}
 
-		loading = true;
+		indexLoading = true;
 		error = null;
-		try {
-			const response = await fetch(`/api/movies?q=${encodeURIComponent(query)}`);
-			const data = await response.json();
 
-			if (data.error) {
-				error = data.error;
-				results = [];
-			} else {
-				results = (data.results ?? []).filter(
-					(m: Movie) => !excludeIds.includes(m.imdbID)
-				);
-			}
-		} catch {
-			error = 'Failed to search movies';
+		try {
+			const titles = await searchLocalTitles(query, 20);
+			const movies = titles.map(toMovieWithRating);
+			results = movies.filter((m) => !excludeIds.includes(m.imdbID));
+		} catch (err) {
+			console.error('Local search error:', err);
+			// Fallback: the poster fetch will also do OMDb search
 			results = [];
 		} finally {
-			loading = false;
+			indexLoading = false;
+		}
+
+		// Schedule poster fetch (debounced)
+		schedulePosterFetch(query);
+	}
+
+	function schedulePosterFetch(query: string) {
+		if (posterDebounceTimer) clearTimeout(posterDebounceTimer);
+		posterDebounceTimer = setTimeout(() => fetchPosters(query), 500);
+	}
+
+	async function fetchPosters(query: string) {
+		if (query.length < 2) return;
+
+		fetchingPosters = true;
+
+		try {
+			const { movies, newFromOMDb } = await fetchPostersAndMerge(results, query);
+
+			// Update existing results with posters
+			results = movies;
+
+			// Merge new OMDb results (sorted by rating, but OMDb doesn't provide ratings)
+			// Insert at the end since we don't have vote counts to sort by
+			if (newFromOMDb.length > 0) {
+				const existingIds = new Set(results.map((m) => m.imdbID));
+				const filtered = newFromOMDb.filter(
+					(m) => !existingIds.has(m.imdbID) && !excludeIds.includes(m.imdbID)
+				);
+				results = [...results, ...filtered];
+			}
+		} catch (err) {
+			console.error('Poster fetch error:', err);
+			// Non-fatal - we still have local results
+		} finally {
+			fetchingPosters = false;
 		}
 	}
 
 	function handleInput(value: string) {
 		searchQuery = value;
-		if (debounceTimer) clearTimeout(debounceTimer);
-		debounceTimer = setTimeout(() => searchMovies(value), 300);
+		searchLocal(value);
 	}
 
-	function handleSelect(movie: Movie) {
-		onselect(movie);
+	function handleSelect(movie: MovieWithRating) {
+		// Convert to Movie (without rating) for the callback
+		const { rating, votes, ...movieData } = movie;
+		onselect(movieData);
 		open = false;
 		searchQuery = '';
 		results = [];
 		tick().then(() => triggerRef?.focus());
 	}
 
-	function closeAndFocusTrigger() {
-		open = false;
-		tick().then(() => triggerRef?.focus());
+	function handleOpenChange(isOpen: boolean) {
+		if (!isOpen) {
+			searchQuery = '';
+			results = [];
+			resetQueryCache();
+		}
 	}
 </script>
 
-<Popover.Root bind:open onOpenChange={(o) => { if (!o) { searchQuery = ''; results = []; } }}>
+<Popover.Root bind:open onOpenChange={handleOpenChange}>
 	<Popover.Trigger bind:ref={triggerRef}>
 		{#snippet child({ props })}
 			<Button
@@ -107,7 +144,7 @@
 				}}
 			/>
 			<Command.List>
-				{#if loading}
+				{#if indexLoading}
 					<Command.Loading>
 						<div class="flex items-center justify-center py-6">
 							<Loader2 class="size-5 animate-spin text-muted-foreground" />
@@ -133,14 +170,26 @@
 										alt={movie.title}
 										class="h-12 w-8 rounded object-cover"
 									/>
+								{:else if fetchingPosters}
+									<div class="flex h-12 w-8 items-center justify-center rounded bg-muted">
+										<Loader2 class="size-4 animate-spin text-muted-foreground" />
+									</div>
 								{:else}
 									<div class="flex h-12 w-8 items-center justify-center rounded bg-muted text-xs text-muted-foreground">
 										N/A
 									</div>
 								{/if}
-								<div class="flex flex-col">
-									<span class="font-medium">{movie.title}</span>
-									<span class="text-sm text-muted-foreground">{movie.year}</span>
+								<div class="flex min-w-0 flex-1 flex-col">
+									<span class="truncate font-medium">{movie.title}</span>
+									<div class="flex items-center gap-2 text-sm text-muted-foreground">
+										<span>{movie.year}</span>
+										{#if movie.rating}
+											<span class="flex items-center gap-0.5">
+												<Star class="size-3 fill-yellow-400 text-yellow-400" />
+												{movie.rating}
+											</span>
+										{/if}
+									</div>
 								</div>
 							</Command.Item>
 						{/each}

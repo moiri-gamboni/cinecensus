@@ -18,7 +18,8 @@ export const GET: RequestHandler = async ({ url, platform }) => {
 	}
 
 	try {
-		const omdbUrl = `https://www.omdbapi.com/?apikey=${apiKey}&s=${encodeURIComponent(query)}&type=movie`;
+		// Don't filter by type - we support movies, TV series, shorts, etc.
+		const omdbUrl = `https://www.omdbapi.com/?apikey=${apiKey}&s=${encodeURIComponent(query)}`;
 		const response = await fetch(omdbUrl);
 		const data: OMDbSearchResponse = await response.json();
 
