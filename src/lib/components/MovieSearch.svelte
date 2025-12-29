@@ -1,10 +1,12 @@
 <script lang="ts">
 	import Loader2 from '@lucide/svelte/icons/loader-2';
 	import Star from '@lucide/svelte/icons/star';
+	import Users from '@lucide/svelte/icons/users';
 	import * as Command from '$lib/components/ui/command/index.js';
 	import type { Movie } from '$lib/types/poll';
 	import { searchLocalTitles, toMovieWithRating, type MovieWithRating } from '$lib/utils/movie-search';
 	import { fetchPostersAndMerge, resetQueryCache, getCachedPoster } from '$lib/utils/poster-fetch';
+	import { formatVotes } from '$lib/utils/format';
 
 	interface Props {
 		onselect: (movie: Movie) => void;
@@ -125,9 +127,8 @@
 	}
 
 	function handleSelect(movie: MovieWithRating) {
-		// Convert to Movie (without rating) for the callback
-		const { rating, votes, ...movieData } = movie;
-		onselect(movieData);
+		// Keep rating and votes for display in MovieCard
+		onselect(movie);
 		searchQuery = '';
 		results = [];
 		resetQueryCache();
@@ -193,6 +194,12 @@
 									<span class="flex items-center gap-0.5">
 										<Star class="size-3 fill-yellow-400 text-yellow-400" />
 										{movie.rating}
+									</span>
+								{/if}
+								{#if movie.votes}
+									<span class="flex items-center gap-0.5">
+										<Users class="size-3" />
+										{formatVotes(movie.votes)}
 									</span>
 								{/if}
 							</div>

@@ -155,7 +155,8 @@ export function toMovieWithRating(title: IMDbTitle): MovieWithRating {
 		title: title.t,
 		year: String(title.y),
 		poster: null,
-		rating: title.r
+		rating: title.r,
+		votes: title.v
 	};
 }
 

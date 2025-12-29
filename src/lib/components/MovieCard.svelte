@@ -1,8 +1,11 @@
 <script lang="ts">
 	import X from '@lucide/svelte/icons/x';
 	import ExternalLink from '@lucide/svelte/icons/external-link';
+	import Star from '@lucide/svelte/icons/star';
+	import Users from '@lucide/svelte/icons/users';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { cn } from '$lib/utils.js';
+	import { formatVotes } from '$lib/utils/format';
 	import type { Movie } from '$lib/types/poll';
 
 	interface Props {
@@ -40,7 +43,21 @@
 
 	<div class="flex min-w-0 flex-1 flex-col">
 		<span class={cn('truncate font-medium', compact && 'text-sm')}>{movie.title}</span>
-		<span class="text-sm text-muted-foreground">{movie.year}</span>
+		<div class="flex items-center gap-2 text-sm text-muted-foreground">
+			<span>{movie.year}</span>
+			{#if movie.rating}
+				<span class="flex items-center gap-0.5">
+					<Star class="size-3 fill-yellow-400 text-yellow-400" />
+					{movie.rating}
+				</span>
+			{/if}
+			{#if movie.votes}
+				<span class="flex items-center gap-0.5">
+					<Users class="size-3" />
+					{formatVotes(movie.votes)}
+				</span>
+			{/if}
+		</div>
 	</div>
 
 	<div class="flex items-center gap-1">

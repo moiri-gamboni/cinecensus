@@ -5,6 +5,8 @@ export interface Movie {
 	title: string;
 	year: string;
 	poster: string | null;
+	rating?: number;
+	votes?: number;
 }
 
 export interface Poll {
