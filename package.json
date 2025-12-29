@@ -5,6 +5,7 @@
 	"type": "module",
 	"scripts": {
 		"dev": "vite dev",
+		"build:index": "tsx scripts/build-search-index.ts",
 		"build": "vite build",
 		"preview": "wrangler dev .svelte-kit/cloudflare/_worker.js",
 		"prepare": "npm run types && svelte-kit sync || echo ''",
@@ -52,7 +53,7 @@
 	"dependencies": {
 		"@neodrag/svelte": "^2.3.3",
 		"@supabase/supabase-js": "^2.89.0",
-		"fuse.js": "^7.1.0",
+		"minisearch": "^7.2.0",
 		"mode-watcher": "^1.1.0"
 	}
 }
