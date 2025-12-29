@@ -123,7 +123,7 @@
 					<Command.Group>
 						{#each results as movie (movie.imdbID)}
 							<Command.Item
-								value={movie.imdbID}
+								value={`${movie.title} ${movie.year} ${movie.imdbID}`}
 								onSelect={() => handleSelect(movie)}
 								class="flex items-center gap-3 py-2"
 							>
