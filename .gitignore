@@ -28,3 +28,6 @@ vite.config.ts.timestamp-*
 
 # Supabase
 /supabase/.temp/
+
+# IMDb data processing temp files
+/scripts/.temp/
