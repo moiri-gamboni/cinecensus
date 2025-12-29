@@ -1,45 +1,89 @@
-import Fuse, { type IFuseOptions } from 'fuse.js';
 import { toImdbId, type IMDbTitle } from '$lib/types/imdb';
 import type { Movie } from '$lib/types/poll';
+import type { WorkerMessage, WorkerResponse } from '$lib/workers/search.worker';
 
-let titlesPromise: Promise<IMDbTitle[]> | null = null;
-let fuseInstance: Fuse<IMDbTitle> | null = null;
-
-const FUSE_OPTIONS: IFuseOptions<IMDbTitle> = {
-	keys: ['t'], // Search primaryTitle
-	threshold: 0.15, // Fuzzy tolerance (0=exact, 1=match anything)
-	distance: 100, // Character distance for fuzzy match
-	minMatchCharLength: 2,
-	includeScore: true
-};
+let worker: Worker | null = null;
+let workerReady = false;
+let initPromise: Promise<void> | null = null;
+let requestId = 0;
+const pendingRequests = new Map<number, { resolve: (results: IMDbTitle[]) => void; reject: (err: Error) => void }>();
 
 /**
- * Lazy-load the IMDb titles dataset.
+ * Get or create the search worker.
  */
-async function loadTitles(): Promise<IMDbTitle[]> {
-	if (!titlesPromise) {
-		titlesPromise = fetch('/imdb-titles.json')
-			.then((res) => {
-				if (!res.ok) throw new Error('Failed to load titles');
-				return res.json();
-			})
-			.catch((err) => {
-				titlesPromise = null; // Allow retry on failure
-				throw err;
-			});
+function getWorker(): Worker {
+	if (!worker) {
+		worker = new Worker(new URL('../workers/search.worker.ts', import.meta.url), { type: 'module' });
+
+		worker.onmessage = (e: MessageEvent<WorkerResponse>) => {
+			const { type } = e.data;
+
+			if (type === 'ready') {
+				workerReady = true;
+				return;
+			}
+
+			if (type === 'results') {
+				const { results, requestId: rid } = e.data;
+				const pending = pendingRequests.get(rid);
+				if (pending) {
+					pending.resolve(results);
+					pendingRequests.delete(rid);
+				}
+				return;
+			}
+
+			if (type === 'error') {
+				console.error('[Search] Worker error:', e.data.error);
+				// Reject all pending requests
+				for (const [rid, pending] of pendingRequests) {
+					pending.reject(new Error(e.data.error));
+					pendingRequests.delete(rid);
+				}
+			}
+		};
+
+		worker.onerror = (err) => {
+			console.error('[Search] Worker error:', err);
+		};
 	}
-	return titlesPromise;
+	return worker;
 }
 
 /**
- * Get or create the Fuse.js instance.
+ * Initialize the worker and load the search index.
  */
-async function getFuse(): Promise<Fuse<IMDbTitle>> {
-	if (!fuseInstance) {
-		const titles = await loadTitles();
-		fuseInstance = new Fuse(titles, FUSE_OPTIONS);
+async function initWorker(): Promise<void> {
+	if (workerReady) return;
+
+	if (!initPromise) {
+		initPromise = new Promise<void>((resolve, reject) => {
+			const w = getWorker();
+
+			const timeout = setTimeout(() => {
+				reject(new Error('Worker initialization timed out'));
+			}, 10000);
+
+			const originalOnMessage = w.onmessage;
+			w.onmessage = (e: MessageEvent<WorkerResponse>) => {
+				if (e.data.type === 'ready') {
+					clearTimeout(timeout);
+					workerReady = true;
+					w.onmessage = originalOnMessage;
+					resolve();
+				} else if (e.data.type === 'error') {
+					clearTimeout(timeout);
+					reject(new Error(e.data.error));
+				}
+				// Also call original handler
+				originalOnMessage?.call(w, e);
+			};
+
+			w.postMessage({ type: 'init' } satisfies WorkerMessage);
+		});
 	}
-	return fuseInstance;
+
+	return initPromise;
 }
 
 /**
@@ -50,20 +94,35 @@ export async function searchLocalTitles(query: string, limit = 20): Promise<IMDb
 	if (query.length < 2) return [];
 
 	const start = performance.now();
-	const fuse = await getFuse();
-	const indexTime = performance.now() - start;
+	await initWorker();
+	const initTime = performance.now() - start;
 
-	const searchStart = performance.now();
-	const results = fuse.search(query, { limit });
-	const searchTime = performance.now() - searchStart;
+	return new Promise((resolve, reject) => {
+		const rid = ++requestId;
+		pendingRequests.set(rid, { resolve, reject });
 
-	const items = results.map((r) => r.item);
-	console.log(
-		`[Fuse] "${query}" → ${results.length} results (index: ${indexTime.toFixed(0)}ms, search: ${searchTime.toFixed(1)}ms)`,
-		items.map((t) => `tt${t.id} ${t.t} (${t.y}) [${t.ty}] ⭐${t.r}`)
-	);
+		const searchStart = performance.now();
+		getWorker().postMessage({
+			type: 'search',
+			query,
+			limit,
+			requestId: rid
+		} satisfies WorkerMessage);
 
-	return items;
+		// Log when results come back
+		const originalResolve = resolve;
+		pendingRequests.set(rid, {
+			resolve: (results) => {
+				const searchTime = performance.now() - searchStart;
+				console.log(
+					`[Search] "${query}" → ${results.length} results (init: ${initTime.toFixed(0)}ms, search: ${searchTime.toFixed(1)}ms)`,
+					results.map((t) => `tt${t.id} ${t.t} (${t.y}) ⭐${t.r} 👥${t.v}`)
+				);
+				originalResolve(results);
+			},
+			reject
+		});
+	});
 }
 
 /**
@@ -101,15 +160,15 @@ export function toMovieWithRating(title: IMDbTitle): MovieWithRating {
 }
 
 /**
- * Check if the titles dataset is loaded.
+ * Check if the search index is loaded.
  */
 export function isLoaded(): boolean {
-	return fuseInstance !== null;
+	return workerReady;
 }
 
 /**
- * Preload the titles dataset (call on app init if desired).
+ * Preload the search index (call on app init if desired).
  */
 export async function preload(): Promise<void> {
-	await getFuse();
+	await initWorker();
 }
