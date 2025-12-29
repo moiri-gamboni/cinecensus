@@ -1,7 +1,7 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import type { OMDbSearchResponse } from '$lib/types/omdb';
-import type { Movie } from '$lib/types/poll';
+import { parseOMDbResponse } from '$lib/utils/omdb';
 
 export const GET: RequestHandler = async ({ url, platform }) => {
 	const query = url.searchParams.get('q');
@@ -13,31 +13,25 @@ export const GET: RequestHandler = async ({ url, platform }) => {
 	const apiKey = platform?.env?.OMDB_API_KEY;
 
 	if (!apiKey) {
+		console.error('OMDB_API_KEY not found in platform.env');
 		return json({ error: 'OMDB_API_KEY not configured' }, { status: 500 });
 	}
 
 	try {
-		const response = await fetch(
-			`https://www.omdbapi.com/?apikey=${apiKey}&s=${encodeURIComponent(query)}&type=movie`
-		);
-
+		const omdbUrl = `https://www.omdbapi.com/?apikey=${apiKey}&s=${encodeURIComponent(query)}&type=movie`;
+		const response = await fetch(omdbUrl);
 		const data: OMDbSearchResponse = await response.json();
 
-		if (data.Response === 'False') {
-			return json({ results: [] });
+		const parsed = parseOMDbResponse(data);
+
+		if (parsed.error) {
+			console.error('OMDb API error:', parsed.error);
+			return json({ error: parsed.error }, { status: 500 });
 		}
 
-		const results: Movie[] =
-			data.Search?.map((m) => ({
-				imdbID: m.imdbID,
-				title: m.Title,
-				year: m.Year,
-				poster: m.Poster !== 'N/A' ? m.Poster : null
-			})) ?? [];
-
-		return json({ results });
+		return json({ results: parsed.results });
 	} catch (error) {
-		console.error('OMDb API error:', error);
+		console.error('OMDb API fetch error:', error);
 		return json({ error: 'Failed to search movies' }, { status: 500 });
 	}
 };
