@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { Checkbox } from '$lib/components/ui/checkbox/index.js';
 	import { Label } from '$lib/components/ui/label/index.js';
+	import MovieFilter from '$lib/components/MovieFilter.svelte';
 	import type { Movie, ApprovalVoteData } from '$lib/types/poll';
 
 	interface Props {
@@ -12,12 +13,23 @@
 
 	let { movies, value, onchange, disabled = false }: Props = $props();
 
+	let filteredIds = $state<Set<string> | null>(null);
+
+	const filteredMovies = $derived.by(() => {
+		const ids = filteredIds;
+		return ids ? movies.filter((m) => ids.has(m.imdbID)) : movies;
+	});
+
 	function toggle(imdbID: string) {
 		if (value.includes(imdbID)) {
 			onchange(value.filter((id) => id !== imdbID));
 		} else {
 			onchange([...value, imdbID]);
 		}
+	}
+
+	function handleFilter(filtered: Movie[], query: string) {
+		filteredIds = query ? new Set(filtered.map((m) => m.imdbID)) : null;
 	}
 </script>
 
@@ -26,8 +38,12 @@
 		Select all movies you approve of. You can vote for as many as you like.
 	</p>
 
+	{#if movies.length > 5}
+		<MovieFilter {movies} onfilter={handleFilter} />
+	{/if}
+
 	<div class="space-y-2">
-		{#each movies as movie (movie.imdbID)}
+		{#each filteredMovies as movie (movie.imdbID)}
 			<Label
 				class="flex cursor-pointer items-center gap-3 rounded-lg border p-3 transition-colors hover:bg-accent/50 has-[[data-state=checked]]:border-primary has-[[data-state=checked]]:bg-primary/5"
 			>

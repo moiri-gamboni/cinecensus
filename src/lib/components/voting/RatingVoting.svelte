@@ -1,5 +1,6 @@
 <script lang="ts">
 	import Star from '@lucide/svelte/icons/star';
+	import MovieFilter from '$lib/components/MovieFilter.svelte';
 	import type { Movie, RatingVoteData } from '$lib/types/poll';
 
 	interface Props {
@@ -11,6 +12,13 @@
 
 	let { movies, value, onchange, disabled = false }: Props = $props();
 
+	let filteredIds = $state<Set<string> | null>(null);
+
+	const filteredMovies = $derived.by(() => {
+		const ids = filteredIds;
+		return ids ? movies.filter((m) => ids.has(m.imdbID)) : movies;
+	});
+
 	function setRating(imdbID: string, rating: number) {
 		if (disabled) return;
 		onchange({ ...value, [imdbID]: rating });
@@ -21,6 +29,10 @@
 	}
 
 	const ratedCount = $derived(Object.values(value).filter((r) => r > 0).length);
+
+	function handleFilter(filtered: Movie[], query: string) {
+		filteredIds = query ? new Set(filtered.map((m) => m.imdbID)) : null;
+	}
 </script>
 
 <div class="space-y-3">
@@ -28,8 +40,12 @@
 		Rate each movie from 1 to 5 stars. The movie with the highest median rating wins.
 	</p>
 
+	{#if movies.length > 5}
+		<MovieFilter {movies} onfilter={handleFilter} />
+	{/if}
+
 	<div class="space-y-3">
-		{#each movies as movie (movie.imdbID)}
+		{#each filteredMovies as movie (movie.imdbID)}
 			{@const currentRating = getRating(movie.imdbID)}
 			<div class="flex items-center gap-3 rounded-lg border p-3">
 				{#if movie.poster}

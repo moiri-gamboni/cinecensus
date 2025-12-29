@@ -1,5 +1,7 @@
 <script lang="ts">
 	import GripVertical from '@lucide/svelte/icons/grip-vertical';
+	import MovieFilter from '$lib/components/MovieFilter.svelte';
+	import { cn } from '$lib/utils.js';
 	import type { Movie, RankedVoteData } from '$lib/types/poll';
 
 	interface Props {
@@ -10,6 +12,18 @@
 	}
 
 	let { movies, value, onchange, disabled = false }: Props = $props();
+
+	let matchingIds = $state<Set<string>>(new Set());
+	let filterQuery = $state('');
+
+	function handleFilter(filtered: Movie[], query: string) {
+		filterQuery = query;
+		matchingIds = new Set(filtered.map((m) => m.imdbID));
+	}
+
+	function isHighlighted(imdbID: string): boolean {
+		return filterQuery !== '' && matchingIds.has(imdbID);
+	}
 
 	// Create ordered list based on current value or default order
 	let orderedMovies = $derived.by(() => {
@@ -69,13 +83,19 @@
 		Drag to reorder. Your top choice is first. If it's eliminated, your vote goes to your next choice.
 	</p>
 
+	{#if movies.length > 5}
+		<MovieFilter {movies} onfilter={handleFilter} placeholder="Find a movie to reorder..." />
+	{/if}
+
 	<div class="space-y-2">
 		{#each orderedMovies as movie, index (movie.imdbID)}
 			<div
-				class="flex items-center gap-2 rounded-lg border bg-card p-3 transition-all"
-				class:opacity-50={draggedIndex === index}
-				class:ring-2={draggedIndex !== null && draggedIndex !== index}
-				class:ring-primary={draggedIndex !== null && draggedIndex !== index}
+				class={cn(
+					'flex items-center gap-2 rounded-lg border bg-card p-3 transition-all',
+					draggedIndex === index && 'opacity-50',
+					draggedIndex !== null && draggedIndex !== index && 'ring-2 ring-primary',
+					isHighlighted(movie.imdbID) && 'border-primary bg-primary/5'
+				)}
 				role="listitem"
 				ondragover={(e) => e.preventDefault()}
 				ondrop={() => handleDrop(index)}
