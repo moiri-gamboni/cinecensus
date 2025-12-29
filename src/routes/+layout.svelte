@@ -4,8 +4,15 @@
 	import { Toaster } from '$lib/components/ui/sonner/index.js';
 	import ModeToggle from '$lib/components/ModeToggle.svelte';
 	import Film from '@lucide/svelte/icons/film';
+	import { browser } from '$app/environment';
+	import { preload } from '$lib/utils/movie-search';
 
 	let { children } = $props();
+
+	// Preload search index when browser is idle
+	if (browser) {
+		requestIdleCallback(() => preload(), { timeout: 3000 });
+	}
 </script>
 
 <svelte:head>
