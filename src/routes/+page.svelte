@@ -136,11 +136,6 @@
 							/>
 						{/each}
 					</div>
-				{:else}
-					<div class="rounded-lg border border-dashed p-8 text-center text-muted-foreground">
-						<p>No movies added yet</p>
-						<p class="text-sm">Search above or bulk paste to add movies</p>
-					</div>
 				{/if}
 			</div>
 		</Card.Content>
