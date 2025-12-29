@@ -112,16 +112,19 @@
 
 			<!-- Movies -->
 			<div class="space-y-3">
-				<div class="flex items-center justify-between">
-					<Label>Movies ({movies.length})</Label>
-					<BulkPasteDialog onresolve={addBulkMovies} excludeIds={excludeIds} />
+				<div class="flex flex-col gap-3">
+					<div class="order-2">
+						<MovieSearch
+							onselect={addMovie}
+							excludeIds={excludeIds}
+							placeholder="Search and add movies..."
+						/>
+					</div>
+					<div class="order-1 flex items-center justify-between">
+						<Label>Movies ({movies.length})</Label>
+						<BulkPasteDialog onresolve={addBulkMovies} excludeIds={excludeIds} />
+					</div>
 				</div>
-
-				<MovieSearch
-					onselect={addMovie}
-					excludeIds={excludeIds}
-					placeholder="Search and add movies..."
-				/>
 
 				{#if movies.length > 0}
 					<div class="space-y-2">
