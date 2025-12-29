@@ -1,18 +1,18 @@
 <script lang="ts">
 	import './layout.css';
+	import { onMount } from 'svelte';
 	import { ModeWatcher } from 'mode-watcher';
 	import { Toaster } from '$lib/components/ui/sonner/index.js';
 	import ModeToggle from '$lib/components/ModeToggle.svelte';
 	import Film from '@lucide/svelte/icons/film';
-	import { browser } from '$app/environment';
 	import { preload } from '$lib/utils/movie-search';
 
 	let { children } = $props();
 
 	// Preload search index when browser is idle
-	if (browser) {
+	onMount(() => {
 		requestIdleCallback(() => preload(), { timeout: 3000 });
-	}
+	});
 </script>
 
 <svelte:head>
