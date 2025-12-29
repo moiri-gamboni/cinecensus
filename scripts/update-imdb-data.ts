@@ -11,15 +11,13 @@
  * - id: IMDb ID without "tt" prefix (e.g., "0133093" for tt0133093)
  * - t: primaryTitle
  * - y: startYear
- * - ty: titleType (abbreviated: m, tv, s, tm, ts, tms)
  * - r: averageRating (1 decimal place)
+ * - v: numVotes
  */
 
 import { createReadStream, createWriteStream, existsSync, readFileSync, writeFileSync, unlinkSync } from 'fs';
 import { createGunzip } from 'zlib';
 import { createInterface } from 'readline';
-import { pipeline } from 'stream/promises';
-import { Writable } from 'stream';
 import https from 'https';
 import path from 'path';
 
@@ -41,21 +39,10 @@ const ALLOWED_TYPES = new Set([
   'tvShort',      // TV shorts
 ]);
 
-// Abbreviated type codes to reduce JSON size
-const TYPE_ABBREV: Record<string, string> = {
-  'movie': 'm',
-  'tvSeries': 'tv',
-  'short': 's',
-  'tvMiniSeries': 'tms',
-  'tvMovie': 'tm',
-  'tvShort': 'ts',
-};
-
 interface IMDbTitle {
   id: string;    // tconst
   t: string;     // primaryTitle
   y: number;     // startYear
-  ty: string;    // titleType (abbreviated)
   r?: number;    // averageRating
   v?: number;    // numVotes
 }
@@ -189,7 +176,6 @@ async function parseBasicsAndJoin(
       id: tconst.slice(2), // Strip "tt" prefix to save space
       t: primaryTitle,
       y: parseInt(startYear, 10),
-      ty: TYPE_ABBREV[titleType] || titleType,
       r: Math.round(rating.rating * 10) / 10, // 1 decimal place
       v: rating.votes,
     });
@@ -246,8 +232,8 @@ async function main() {
     titles.sort((a, b) => (b.v || 0) - (a.v || 0));
     const topTitles = titles.slice(0, TOP_N);
 
-    // Remove vote count from output (only used for sorting)
-    const output = topTitles.map(({ v, ...rest }) => rest);
+    // Keep vote count for search ranking (abbreviated as 'v')
+    const output = topTitles;
 
     // Write output
     console.log(`Writing ${output.length} titles to ${OUTPUT_FILE}...`);
@@ -261,7 +247,12 @@ async function main() {
     const stats = await stat(OUTPUT_FILE);
     console.log(`Output file size: ${(stats.size / 1024 / 1024).toFixed(2)} MB`);
 
-    console.log('Done!');
+    // Build search index
+    console.log('\nBuilding search index...');
+    const { buildSearchIndex } = await import('./build-search-index.js');
+    await buildSearchIndex();
+
+    console.log('\nDone!');
   } finally {
     // Cleanup temp files
     try {
