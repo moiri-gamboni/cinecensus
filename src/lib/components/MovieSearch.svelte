@@ -22,23 +22,33 @@
 	let searchQuery = $state('');
 	let results = $state<Movie[]>([]);
 	let loading = $state(false);
+	let error = $state<string | null>(null);
 	let triggerRef = $state<HTMLButtonElement>(null!);
 	let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 
 	async function searchMovies(query: string) {
 		if (query.length < 2) {
 			results = [];
+			error = null;
 			return;
 		}
 
 		loading = true;
+		error = null;
 		try {
 			const response = await fetch(`/api/movies?q=${encodeURIComponent(query)}`);
 			const data = await response.json();
-			results = (data.results ?? []).filter(
-				(m: Movie) => !excludeIds.includes(m.imdbID)
-			);
+
+			if (data.error) {
+				error = data.error;
+				results = [];
+			} else {
+				results = (data.results ?? []).filter(
+					(m: Movie) => !excludeIds.includes(m.imdbID)
+				);
+			}
 		} catch {
+			error = 'Failed to search movies';
 			results = [];
 		} finally {
 			loading = false;
@@ -103,6 +113,10 @@
 							<Loader2 class="size-5 animate-spin text-muted-foreground" />
 						</div>
 					</Command.Loading>
+				{:else if error}
+					<div class="py-6 text-center text-sm text-destructive">
+						{error}
+					</div>
 				{:else if searchQuery.length >= 2 && results.length === 0}
 					<Command.Empty>No movies found.</Command.Empty>
 				{:else if results.length > 0}
