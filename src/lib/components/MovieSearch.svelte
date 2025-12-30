@@ -24,10 +24,12 @@
 	let posterDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 
 	let currentQuery = $state(''); // Track the current query to avoid stale updates
+	let hasFetchedAll = $state(false); // Track if we've fetched all 20 posters
 
 	// Immediately search local index (no debounce)
 	async function searchLocal(query: string) {
 		currentQuery = query; // Track current query for stale detection
+		hasFetchedAll = false; // Reset on new query
 
 		if (query.length < 2) {
 			results = [];
@@ -79,7 +81,7 @@
 		posterDebounceTimer = setTimeout(() => fetchPosters(query), 500);
 	}
 
-	async function fetchPosters(query: string) {
+	async function fetchPosters(query: string, visibleCount = 10) {
 		if (query.length < 2) return;
 
 		// Don't fetch if query has changed (user typed something else)
@@ -88,11 +90,11 @@
 			return;
 		}
 
-		console.log(`[Search] Starting poster fetch for "${query}"`);
+		console.log(`[Search] Starting poster fetch for "${query}" (visible: ${visibleCount})`);
 		// fetchingPosters already true from schedulePosterFetch
 
 		try {
-			const { movies, newFromOMDb } = await fetchPostersAndMerge(results, query);
+			const { movies, newFromOMDb } = await fetchPostersAndMerge(results, query, visibleCount);
 
 			// Don't update if query changed during fetch
 			if (query !== currentQuery) {
@@ -115,6 +117,11 @@
 					results = [...results, ...filtered];
 				}
 			}
+
+			// Mark as fully fetched if we fetched all
+			if (visibleCount >= 20) {
+				hasFetchedAll = true;
+			}
 		} catch (err) {
 			console.error('[Search] Poster fetch error:', err);
 			// Non-fatal - we still have local results
@@ -122,6 +129,16 @@
 			fetchingPosters = false;
 			console.log(`[Search] Poster fetch complete, ${results.length} total results`);
 		}
+	}
+
+	// Fetch remaining posters when user scrolls
+	function handleListScroll() {
+		if (hasFetchedAll || results.length <= 10) return;
+
+		console.log(`[Search] Scroll detected, fetching remaining posters`);
+		hasFetchedAll = true; // Prevent multiple triggers
+		fetchingPosters = true;
+		fetchPosters(currentQuery, 20);
 	}
 
 	function handleInput(value: string) {
@@ -144,7 +161,7 @@
 		value={searchQuery}
 		oninput={(e) => handleInput(e.currentTarget.value)}
 	/>
-	<Command.List class="empty:hidden">
+	<Command.List class="empty:hidden" onscroll={handleListScroll}>
 		{#if indexLoading}
 			<Command.Loading>
 				<div class="flex items-center justify-center py-6">
