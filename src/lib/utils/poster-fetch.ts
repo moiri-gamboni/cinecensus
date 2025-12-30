@@ -233,6 +233,7 @@ export async function fetchPostersAndMerge(
 	const localIds = new Set(moviesWithCached.map((m) => m.imdbID));
 	const postersApplied: string[] = [];
 	const postersMissing: string[] = [];
+	const postersNotFound: string[] = [];
 	const updatedMovies = moviesWithCached.map((m) => {
 		if (m.poster === null) {
 			const omdb = omdbById.get(m.imdbID);
@@ -240,7 +241,12 @@ export async function fetchPostersAndMerge(
 				cachePoster(m.imdbID, omdb.poster);
 				postersApplied.push(`${m.imdbID} ${m.title}`);
 				return { ...m, poster: omdb.poster };
+			} else if (omdb) {
+				// Movie found in OMDb but has no poster - cache this fact
+				cachePoster(m.imdbID, null);
+				postersNotFound.push(`${m.imdbID} ${m.title}`);
 			} else {
+				// Movie not in OMDb search results at all
 				postersMissing.push(`${m.imdbID} ${m.title}`);
 			}
 		}
@@ -260,8 +266,17 @@ export async function fetchPostersAndMerge(
 	}
 
 	console.log(`[Poster] Applied ${postersApplied.length} posters:`, postersApplied);
+	if (postersNotFound.length > 0) {
+		console.log(
+			`[Poster] ${postersNotFound.length} posters confirmed unavailable (cached as null):`,
+			postersNotFound
+		);
+	}
 	if (postersMissing.length > 0) {
-		console.log(`[Poster] Missing ${postersMissing.length} posters (not in OMDb results):`, postersMissing);
+		console.log(
+			`[Poster] ${postersMissing.length} movies not in OMDb search results (will retry next search):`,
+			postersMissing
+		);
 	}
 	if (newFromOMDb.length > 0) {
 		console.log(
