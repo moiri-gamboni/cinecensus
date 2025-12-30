@@ -7,6 +7,7 @@ export interface Movie {
 	poster: string | null;
 	rating?: number;
 	votes?: number;
+	plot?: string;
 }
 
 export interface Poll {

@@ -31,12 +31,14 @@ export const GET: RequestHandler = async ({ url, platform }) => {
 		const hasPoster = data.Poster !== 'N/A';
 		console.log(`[Resolve] ${imdbID} → "${data.Title}" (${data.Year}) ${hasPoster ? '🖼️' : '❌'}`);
 
+		const hasPlot = data.Plot && data.Plot !== 'N/A';
 		return json({
 			movie: {
 				imdbID: data.imdbID,
 				title: data.Title,
 				year: data.Year,
-				poster: hasPoster ? data.Poster : null
+				poster: hasPoster ? data.Poster : null,
+				plot: hasPlot ? data.Plot : undefined
 			}
 		});
 	} catch (err) {

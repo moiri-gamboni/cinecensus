@@ -5,7 +5,7 @@
 	import * as Command from '$lib/components/ui/command/index.js';
 	import type { Movie } from '$lib/types/poll';
 	import { searchLocalTitles, toMovieWithRating, type MovieWithRating } from '$lib/utils/movie-search';
-	import { fetchPostersAndMerge, resetQueryCache, getCachedPoster, fetchPosterById } from '$lib/utils/poster-fetch';
+	import { fetchPostersAndMerge, resetQueryCache, getCachedPoster, getCachedPlot, fetchMovieDetailsById } from '$lib/utils/poster-fetch';
 	import { formatVotes } from '$lib/utils/format';
 
 	interface Props {
@@ -148,14 +148,26 @@
 		searchLocal(value);
 	}
 
-	function handleSelect(movie: MovieWithRating) {
-		// If no poster yet, fetch it in background (fire-and-forget)
-		// This ensures MovieCard's 1s re-check will find it cached
-		if (!movie.poster) {
-			fetchPosterById(movie.imdbID);
+	async function handleSelect(movie: MovieWithRating) {
+		// Fetch movie details (poster + plot) if not already cached
+		const cachedPoster = getCachedPoster(movie.imdbID);
+		const cachedPlot = getCachedPlot(movie.imdbID);
+
+		let enrichedMovie = { ...movie };
+
+		if (cachedPoster !== undefined && cachedPlot !== undefined) {
+			// Both cached, use cached values
+			enrichedMovie.poster = cachedPoster;
+			enrichedMovie.plot = cachedPlot ?? undefined;
+		} else {
+			// Fetch details (this caches both poster and plot)
+			const details = await fetchMovieDetailsById(movie.imdbID);
+			enrichedMovie.poster = details.poster;
+			enrichedMovie.plot = details.plot ?? undefined;
 		}
+
 		// Keep rating and votes for display in MovieCard
-		onselect(movie);
+		onselect(enrichedMovie);
 		searchQuery = '';
 		results = [];
 		resetQueryCache();

@@ -20,6 +20,7 @@ export interface OMDbDetailResponse {
 	imdbID: string;
 	Type: string;
 	Poster: string;
+	Plot?: string;
 	Response: 'True' | 'False';
 	Error?: string;
 }

@@ -41,6 +41,9 @@
 			</span>
 		{/if}
 	</div>
+	{#if movie.plot}
+		<p class="mt-1 line-clamp-2 text-xs text-muted-foreground">{movie.plot}</p>
+	{/if}
 </div>
 
 <a

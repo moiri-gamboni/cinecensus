@@ -2,6 +2,7 @@ import type { Movie } from '$lib/types/poll';
 import type { MovieWithRating } from './movie-search';
 
 const POSTER_CACHE_KEY = 'cinecensus_posters';
+const PLOT_CACHE_KEY = 'cinecensus_plots';
 const POSTER_CACHE_TTL = 30 * 24 * 60 * 60 * 1000; // 30 days
 
 // Stop words to skip when extracting search terms
@@ -10,6 +11,13 @@ const STOP_WORDS = new Set(['the', 'a', 'an', 'of', 'and', 'in', 'to', 'for', 'i
 interface PosterCache {
 	[imdbID: string]: {
 		poster: string | null;
+		timestamp: number;
+	};
+}
+
+interface PlotCache {
+	[imdbID: string]: {
+		plot: string | null;
 		timestamp: number;
 	};
 }
@@ -50,6 +58,39 @@ export function cachePoster(imdbID: string, poster: string | null): void {
 		const cache: PosterCache = JSON.parse(localStorage.getItem(POSTER_CACHE_KEY) || '{}');
 		cache[imdbID] = { poster, timestamp: Date.now() };
 		localStorage.setItem(POSTER_CACHE_KEY, JSON.stringify(cache));
+	} catch {
+		// Ignore cache errors
+	}
+}
+
+/**
+ * Get cached plot for an IMDb ID.
+ */
+export function getCachedPlot(imdbID: string): string | null | undefined {
+	if (typeof localStorage === 'undefined') return undefined;
+
+	try {
+		const cache: PlotCache = JSON.parse(localStorage.getItem(PLOT_CACHE_KEY) || '{}');
+		const entry = cache[imdbID];
+		if (entry && Date.now() - entry.timestamp < POSTER_CACHE_TTL) {
+			return entry.plot;
+		}
+	} catch {
+		// Ignore cache errors
+	}
+	return undefined;
+}
+
+/**
+ * Cache a plot for an IMDb ID.
+ */
+export function cachePlot(imdbID: string, plot: string | null): void {
+	if (typeof localStorage === 'undefined') return;
+
+	try {
+		const cache: PlotCache = JSON.parse(localStorage.getItem(PLOT_CACHE_KEY) || '{}');
+		cache[imdbID] = { plot, timestamp: Date.now() };
+		localStorage.setItem(PLOT_CACHE_KEY, JSON.stringify(cache));
 	} catch {
 		// Ignore cache errors
 	}
@@ -325,5 +366,40 @@ export async function fetchPosterById(imdbID: string): Promise<string | null> {
 	} catch (err) {
 		console.error(`[Poster] Failed to fetch ${imdbID}:`, err);
 		return null;
+	}
+}
+
+/**
+ * Fetch movie details (poster and plot) for a single movie by IMDb ID.
+ * Used when selecting a movie to get all details.
+ */
+export async function fetchMovieDetailsById(
+	imdbID: string
+): Promise<{ poster: string | null; plot: string | null }> {
+	// Check caches first
+	const cachedPoster = getCachedPoster(imdbID);
+	const cachedPlot = getCachedPlot(imdbID);
+
+	if (cachedPoster !== undefined && cachedPlot !== undefined) {
+		console.log(`[Details] ${imdbID} fully cached`);
+		return { poster: cachedPoster, plot: cachedPlot };
+	}
+
+	console.log(`[Details] Fetching details by ID: ${imdbID}`);
+	try {
+		const response = await fetch(`/api/movies/resolve?i=${encodeURIComponent(imdbID)}`);
+		const result = await response.json();
+
+		const poster = result.movie?.poster ?? null;
+		const plot = result.movie?.plot ?? null;
+
+		cachePoster(imdbID, poster);
+		cachePlot(imdbID, plot);
+
+		console.log(`[Details] ${imdbID} fetched: poster=${poster ? '🖼️' : '❌'}, plot=${plot ? '📝' : '❌'}`);
+		return { poster, plot };
+	} catch (err) {
+		console.error(`[Details] Failed to fetch ${imdbID}:`, err);
+		return { poster: null, plot: null };
 	}
 }
