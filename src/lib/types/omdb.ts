@@ -12,3 +12,14 @@ export interface OMDbSearchResponse {
 	Response: 'True' | 'False';
 	Error?: string;
 }
+
+// Response from OMDb when fetching by IMDb ID
+export interface OMDbDetailResponse {
+	Title: string;
+	Year: string;
+	imdbID: string;
+	Type: string;
+	Poster: string;
+	Response: 'True' | 'False';
+	Error?: string;
+}

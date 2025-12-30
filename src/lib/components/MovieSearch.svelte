@@ -5,7 +5,7 @@
 	import * as Command from '$lib/components/ui/command/index.js';
 	import type { Movie } from '$lib/types/poll';
 	import { searchLocalTitles, toMovieWithRating, type MovieWithRating } from '$lib/utils/movie-search';
-	import { fetchPostersAndMerge, resetQueryCache, getCachedPoster } from '$lib/utils/poster-fetch';
+	import { fetchPostersAndMerge, resetQueryCache, getCachedPoster, fetchPosterById } from '$lib/utils/poster-fetch';
 	import { formatVotes } from '$lib/utils/format';
 
 	interface Props {
@@ -149,6 +149,11 @@
 	}
 
 	function handleSelect(movie: MovieWithRating) {
+		// If no poster yet, fetch it in background (fire-and-forget)
+		// This ensures MovieCard's 1s re-check will find it cached
+		if (!movie.poster) {
+			fetchPosterById(movie.imdbID);
+		}
 		// Keep rating and votes for display in MovieCard
 		onselect(movie);
 		searchQuery = '';

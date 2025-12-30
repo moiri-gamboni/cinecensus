@@ -1,8 +1,51 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import type { OMDbSearchResponse } from '$lib/types/omdb';
+import type { OMDbSearchResponse, OMDbDetailResponse } from '$lib/types/omdb';
 import type { Movie } from '$lib/types/poll';
 
+// GET: Fetch single movie by IMDb ID
+export const GET: RequestHandler = async ({ url, platform }) => {
+	const apiKey = platform?.env?.OMDB_API_KEY;
+
+	if (!apiKey) {
+		console.error('[Resolve] OMDB_API_KEY not configured');
+		return json({ error: 'OMDB_API_KEY not configured' }, { status: 500 });
+	}
+
+	const imdbID = url.searchParams.get('i');
+	if (!imdbID) {
+		return json({ error: 'i parameter required' }, { status: 400 });
+	}
+
+	console.log(`[Resolve] Fetching by ID: ${imdbID}`);
+
+	try {
+		const response = await fetch(`https://www.omdbapi.com/?apikey=${apiKey}&i=${imdbID}`);
+		const data: OMDbDetailResponse = await response.json();
+
+		if (data.Response === 'False') {
+			console.log(`[Resolve] ${imdbID} → not found`);
+			return json({ movie: null });
+		}
+
+		const hasPoster = data.Poster !== 'N/A';
+		console.log(`[Resolve] ${imdbID} → "${data.Title}" (${data.Year}) ${hasPoster ? '🖼️' : '❌'}`);
+
+		return json({
+			movie: {
+				imdbID: data.imdbID,
+				title: data.Title,
+				year: data.Year,
+				poster: hasPoster ? data.Poster : null
+			}
+		});
+	} catch (err) {
+		console.error(`[Resolve] ${imdbID} failed:`, err);
+		return json({ error: 'Failed to fetch' }, { status: 500 });
+	}
+};
+
+// POST: Resolve multiple titles to movies
 export const POST: RequestHandler = async ({ request, platform }) => {
 	const apiKey = platform?.env?.OMDB_API_KEY;
 

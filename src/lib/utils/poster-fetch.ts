@@ -294,3 +294,36 @@ export async function fetchPostersAndMerge(
 export function resetQueryCache(): void {
 	queriedTerms.clear();
 }
+
+/**
+ * Fetch poster for a single movie by IMDb ID.
+ * Used when selecting a movie that hasn't had its poster fetched yet.
+ */
+export async function fetchPosterById(imdbID: string): Promise<string | null> {
+	// Check cache first
+	const cached = getCachedPoster(imdbID);
+	if (cached !== undefined) {
+		console.log(`[Poster] ${imdbID} already cached: ${cached ? '🖼️' : '❌'}`);
+		return cached;
+	}
+
+	console.log(`[Poster] Fetching poster by ID: ${imdbID}`);
+	try {
+		const response = await fetch(`/api/movies/resolve?i=${encodeURIComponent(imdbID)}`);
+		const result = await response.json();
+
+		if (result.movie?.poster) {
+			cachePoster(imdbID, result.movie.poster);
+			console.log(`[Poster] ${imdbID} fetched: 🖼️`);
+			return result.movie.poster;
+		} else {
+			// Cache as null so we don't retry
+			cachePoster(imdbID, null);
+			console.log(`[Poster] ${imdbID} has no poster`);
+			return null;
+		}
+	} catch (err) {
+		console.error(`[Poster] Failed to fetch ${imdbID}:`, err);
+		return null;
+	}
+}
