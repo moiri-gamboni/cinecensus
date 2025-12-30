@@ -27,10 +27,6 @@
 </script>
 
 <div class="space-y-3">
-	<p class="text-sm text-muted-foreground">
-		Select your one favorite movie.
-	</p>
-
 	{#if movies.length > 5}
 		<MovieFilter {movies} onfilter={handleFilter} />
 	{/if}

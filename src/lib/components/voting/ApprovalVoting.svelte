@@ -35,10 +35,6 @@
 </script>
 
 <div class="space-y-3">
-	<p class="text-sm text-muted-foreground">
-		Select all movies you approve of. You can vote for as many as you like.
-	</p>
-
 	{#if movies.length > 5}
 		<MovieFilter {movies} onfilter={handleFilter} />
 	{/if}

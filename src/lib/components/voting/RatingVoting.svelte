@@ -38,7 +38,7 @@
 
 <div class="space-y-3">
 	<p class="text-sm text-muted-foreground">
-		Rate each movie from 1 to 5 stars. The movie with the highest median rating wins.
+		The movie with the highest median rating wins.
 	</p>
 
 	{#if movies.length > 5}
