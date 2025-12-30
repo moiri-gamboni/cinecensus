@@ -2,6 +2,7 @@
 	import Star from '@lucide/svelte/icons/star';
 	import Users from '@lucide/svelte/icons/users';
 	import ExternalLink from '@lucide/svelte/icons/external-link';
+	import { Button } from '$lib/components/ui/button/index.js';
 	import { formatVotes } from '$lib/utils/format';
 	import type { Movie } from '$lib/types/poll';
 
@@ -46,13 +47,15 @@
 	{/if}
 </div>
 
-<a
+<Button
+	variant="ghost"
+	size="icon"
+	class="size-8 shrink-0"
 	href="https://www.imdb.com/title/{movie.imdbID}"
 	target="_blank"
 	rel="noopener noreferrer"
-	class="shrink-0 rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
 	onclick={(e) => e.stopPropagation()}
 	aria-label="View on IMDb"
 >
 	<ExternalLink class="size-4" />
-</a>
+</Button>

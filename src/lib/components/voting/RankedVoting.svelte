@@ -1,5 +1,4 @@
 <script lang="ts">
-	import GripVertical from '@lucide/svelte/icons/grip-vertical';
 	import MovieFilter from '$lib/components/MovieFilter.svelte';
 	import MovieInfo from './MovieInfo.svelte';
 	import { cn } from '$lib/utils.js';
@@ -57,20 +56,6 @@
 		draggedIndex = null;
 	}
 
-	function moveUp(index: number) {
-		if (disabled || index === 0) return;
-		const newOrder = [...orderedMovies];
-		[newOrder[index - 1], newOrder[index]] = [newOrder[index], newOrder[index - 1]];
-		onchange(newOrder.map((m) => m.imdbID));
-	}
-
-	function moveDown(index: number) {
-		if (disabled || index === orderedMovies.length - 1) return;
-		const newOrder = [...orderedMovies];
-		[newOrder[index], newOrder[index + 1]] = [newOrder[index + 1], newOrder[index]];
-		onchange(newOrder.map((m) => m.imdbID));
-	}
-
 	// Initialize value if empty
 	$effect(() => {
 		if (value.length === 0 && movies.length > 0) {
@@ -93,55 +78,19 @@
 			<div
 				class={cn(
 					'flex items-center gap-2 rounded-lg border bg-card p-3 transition-all',
+					!disabled && 'cursor-grab active:cursor-grabbing',
 					draggedIndex === index && 'opacity-50',
 					draggedIndex !== null && draggedIndex !== index && 'ring-2 ring-primary',
 					isHighlighted(movie.imdbID) && 'border-primary bg-primary/5'
 				)}
 				role="listitem"
+				draggable={!disabled}
+				ondragstart={() => handleDragStart(index)}
+				ondragend={() => (draggedIndex = null)}
 				ondragover={(e) => e.preventDefault()}
 				ondrop={() => handleDrop(index)}
 			>
-				<button
-					type="button"
-					class="cursor-grab touch-none text-muted-foreground hover:text-foreground disabled:cursor-not-allowed"
-					{disabled}
-					draggable={!disabled}
-					ondragstart={() => handleDragStart(index)}
-					ondragend={() => (draggedIndex = null)}
-				>
-					<GripVertical class="size-5" />
-				</button>
-
-				<span class="flex size-6 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">
-					{index + 1}
-				</span>
-
 				<MovieInfo {movie} />
-
-				<div class="flex flex-col gap-0.5">
-					<button
-						type="button"
-						class="rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground disabled:opacity-50"
-						onclick={() => moveUp(index)}
-						disabled={disabled || index === 0}
-						aria-label="Move up"
-					>
-						<svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-							<path d="M18 15l-6-6-6 6" />
-						</svg>
-					</button>
-					<button
-						type="button"
-						class="rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground disabled:opacity-50"
-						onclick={() => moveDown(index)}
-						disabled={disabled || index === orderedMovies.length - 1}
-						aria-label="Move down"
-					>
-						<svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-							<path d="M6 9l6 6 6-6" />
-						</svg>
-					</button>
-				</div>
 			</div>
 		{/each}
 	</div>
