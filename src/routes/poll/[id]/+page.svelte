@@ -19,11 +19,25 @@
 	let submitting = $state(false);
 	let copied = $state(false);
 
-	// Vote data for each voting method
-	let approvalVote = $state<ApprovalVoteData>([]);
-	let singleVote = $state<SingleVoteData>('');
-	let rankedVote = $state<RankedVoteData>([]);
-	let ratingVote = $state<RatingVoteData>({});
+	// Initialize vote data from existing vote if available
+	function getInitialVote<T>(defaultValue: T): T {
+		if (!data.existingVoteData) return defaultValue;
+		return data.existingVoteData as T;
+	}
+
+	// Vote data for each voting method - pre-populated if user has already voted
+	let approvalVote = $state<ApprovalVoteData>(
+		data.poll.voting_method === 'approval' ? getInitialVote<ApprovalVoteData>([]) : []
+	);
+	let singleVote = $state<SingleVoteData>(
+		data.poll.voting_method === 'single' ? getInitialVote<SingleVoteData>('') : ''
+	);
+	let rankedVote = $state<RankedVoteData>(
+		data.poll.voting_method === 'ranked' ? getInitialVote<RankedVoteData>([]) : []
+	);
+	let ratingVote = $state<RatingVoteData>(
+		data.poll.voting_method === 'rating' ? getInitialVote<RatingVoteData>({}) : {}
+	);
 
 	const currentVoteData = $derived.by(() => {
 		switch (data.poll.voting_method) {

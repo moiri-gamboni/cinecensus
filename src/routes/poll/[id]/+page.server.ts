@@ -23,24 +23,27 @@ export const load: PageServerLoad = async ({ params, cookies, platform }) => {
 		throw error(404, 'Poll not found');
 	}
 
-	// Check if user already voted
+	// Check if user already voted and get their vote data
 	const fingerprint = cookies.get('voter_fingerprint');
 	let hasVoted = false;
+	let existingVoteData = null;
 
 	if (fingerprint) {
 		const { data: existingVote } = await supabase
 			.from('votes')
-			.select('id')
+			.select('id, vote_data')
 			.eq('poll_id', params.id)
 			.eq('voter_fingerprint', fingerprint)
 			.single();
 
 		hasVoted = !!existingVote;
+		existingVoteData = existingVote?.vote_data ?? null;
 	}
 
 	return {
 		poll: poll as Poll,
-		hasVoted
+		hasVoted,
+		existingVoteData
 	};
 };
 
