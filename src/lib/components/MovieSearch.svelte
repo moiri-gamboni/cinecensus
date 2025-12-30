@@ -105,6 +105,7 @@
 			}
 
 			// Update existing results with posters
+			console.log(`[Search] fetchPosters: updating results (${movies.length} movies, searchQuery="${searchQuery}")`);
 			results = movies;
 
 			// Merge new OMDb results (sorted by rating, but OMDb doesn't provide ratings)
@@ -129,7 +130,10 @@
 			// Non-fatal - we still have local results
 		} finally {
 			fetchingPosters = false;
-			console.log(`[Search] Poster fetch complete, ${results.length} total results`);
+			console.log(`[Search] Poster fetch complete, ${results.length} total results, searchQuery="${searchQuery}"`);
+			if (searchQuery === '' && results.length > 0) {
+				console.warn(`[Search] BUG DETECTED: results populated but searchQuery is empty!`);
+			}
 		}
 	}
 
@@ -149,6 +153,16 @@
 	}
 
 	async function handleSelect(movie: MovieWithRating) {
+		console.log(`[Search] handleSelect START for "${movie.title}" (currentQuery="${currentQuery}", timer=${!!posterDebounceTimer})`);
+
+		// Cancel any pending poster fetch and mark query as stale to prevent race conditions
+		if (posterDebounceTimer) {
+			clearTimeout(posterDebounceTimer);
+			posterDebounceTimer = null;
+			console.log(`[Search] handleSelect: cancelled pending poster timer`);
+		}
+		currentQuery = ''; // Prevents any in-flight fetches from updating results
+
 		// Fetch movie details (poster + plot) if not already cached
 		const cachedPoster = getCachedPoster(movie.imdbID);
 		const cachedPlot = getCachedPlot(movie.imdbID);
@@ -159,18 +173,23 @@
 			// Both cached, use cached values
 			enrichedMovie.poster = cachedPoster;
 			enrichedMovie.plot = cachedPlot ?? undefined;
+			console.log(`[Search] handleSelect: using cached data`);
 		} else {
 			// Fetch details (this caches both poster and plot)
+			console.log(`[Search] handleSelect: fetching details (await starts)`);
 			const details = await fetchMovieDetailsById(movie.imdbID);
+			console.log(`[Search] handleSelect: fetching details (await ends, currentQuery="${currentQuery}")`);
 			enrichedMovie.poster = details.poster;
 			enrichedMovie.plot = details.plot ?? undefined;
 		}
 
 		// Keep rating and votes for display in MovieCard
+		console.log(`[Search] handleSelect: calling onselect, clearing state`);
 		onselect(enrichedMovie);
 		searchQuery = '';
 		results = [];
 		resetQueryCache();
+		console.log(`[Search] handleSelect END (results.length=${results.length})`);
 	}
 </script>
 
