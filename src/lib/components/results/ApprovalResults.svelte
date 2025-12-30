@@ -1,7 +1,9 @@
 <script lang="ts">
 	import { Progress } from '$lib/components/ui/progress/index.js';
 	import { Badge } from '$lib/components/ui/badge/index.js';
+	import { Button } from '$lib/components/ui/button/index.js';
 	import Trophy from '@lucide/svelte/icons/trophy';
+	import ExternalLink from '@lucide/svelte/icons/external-link';
 	import type { ApprovalResult, Movie } from '$lib/types/poll';
 	import { cn } from '$lib/utils.js';
 
@@ -58,6 +60,18 @@
 					</div>
 					<Progress value={(result.count / maxCount) * 100} class="h-2" />
 				</div>
+
+				<Button
+					variant="ghost"
+					size="icon"
+					class="size-8 shrink-0"
+					href="https://www.imdb.com/title/{result.movie.imdbID}"
+					target="_blank"
+					rel="noopener noreferrer"
+					aria-label="View on IMDb"
+				>
+					<ExternalLink class="size-4" />
+				</Button>
 			</div>
 		</div>
 	{/each}

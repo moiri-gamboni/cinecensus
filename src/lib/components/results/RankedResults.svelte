@@ -2,7 +2,9 @@
 	import Trophy from '@lucide/svelte/icons/trophy';
 	import ChevronDown from '@lucide/svelte/icons/chevron-down';
 	import XCircle from '@lucide/svelte/icons/x-circle';
+	import ExternalLink from '@lucide/svelte/icons/external-link';
 	import { Badge } from '$lib/components/ui/badge/index.js';
+	import { Button } from '$lib/components/ui/button/index.js';
 	import { Progress } from '$lib/components/ui/progress/index.js';
 	import { cn } from '$lib/utils.js';
 	import type { RankedResult, Movie } from '$lib/types/poll';
@@ -95,6 +97,18 @@
 						<Progress value={(finalVotes / maxFinalVotes) * 100} class="h-2" />
 					{/if}
 				</div>
+
+				<Button
+					variant="ghost"
+					size="icon"
+					class="size-8 shrink-0"
+					href="https://www.imdb.com/title/{movie.imdbID}"
+					target="_blank"
+					rel="noopener noreferrer"
+					aria-label="View on IMDb"
+				>
+					<ExternalLink class="size-4" />
+				</Button>
 			</div>
 		</div>
 	{/each}
