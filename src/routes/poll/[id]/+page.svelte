@@ -180,12 +180,14 @@
 				use:enhance={() => {
 					submitting = true;
 					return async ({ result }) => {
-						submitting = false;
 						if (result.type === 'redirect') {
 							votedPolls.add(data.poll.id);
-							goto(result.location);
+							await goto(result.location);
 						} else if (result.type === 'error') {
 							toast.error(result.error?.message || 'Failed to submit vote');
+							submitting = false;
+						} else {
+							submitting = false;
 						}
 					};
 				}}

@@ -71,10 +71,9 @@
 			pollOwnership.add(data.id);
 
 			toast.success('Poll created!');
-			goto(`/poll/${data.id}`);
+			await goto(`/poll/${data.id}`);
 		} catch (err) {
 			toast.error(err instanceof Error ? err.message : 'Failed to create poll');
-		} finally {
 			submitting = false;
 		}
 	}
