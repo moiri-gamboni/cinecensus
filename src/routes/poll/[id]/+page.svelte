@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { goto } from '$app/navigation';
+	import { untrack } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	import Loader2 from '@lucide/svelte/icons/loader-2';
 	import Vote from '@lucide/svelte/icons/vote';
@@ -19,24 +20,23 @@
 	let submitting = $state(false);
 	let copied = $state(false);
 
-	// Initialize vote data from existing vote if available
-	function getInitialVote<T>(defaultValue: T): T {
-		if (!data.existingVoteData) return defaultValue;
-		return data.existingVoteData as T;
-	}
-
 	// Vote data for each voting method - pre-populated if user has already voted
+	// Using untrack since these are intentional one-time initializations
 	let approvalVote = $state<ApprovalVoteData>(
-		data.poll.voting_method === 'approval' ? getInitialVote<ApprovalVoteData>([]) : []
+		untrack(() => data.poll.voting_method === 'approval' && data.existingVoteData
+			? data.existingVoteData as ApprovalVoteData : [])
 	);
 	let singleVote = $state<SingleVoteData>(
-		data.poll.voting_method === 'single' ? getInitialVote<SingleVoteData>('') : ''
+		untrack(() => data.poll.voting_method === 'single' && data.existingVoteData
+			? data.existingVoteData as SingleVoteData : '')
 	);
 	let rankedVote = $state<RankedVoteData>(
-		data.poll.voting_method === 'ranked' ? getInitialVote<RankedVoteData>([]) : []
+		untrack(() => data.poll.voting_method === 'ranked' && data.existingVoteData
+			? data.existingVoteData as RankedVoteData : [])
 	);
 	let ratingVote = $state<RatingVoteData>(
-		data.poll.voting_method === 'rating' ? getInitialVote<RatingVoteData>({}) : {}
+		untrack(() => data.poll.voting_method === 'rating' && data.existingVoteData
+			? data.existingVoteData as RatingVoteData : {})
 	);
 
 	const currentVoteData = $derived.by(() => {
