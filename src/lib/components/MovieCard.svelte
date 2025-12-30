@@ -5,6 +5,7 @@
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { cn } from '$lib/utils.js';
 	import { formatVotes } from '$lib/utils/format';
+	import { getCachedPoster } from '$lib/utils/poster-fetch';
 	import type { Movie } from '$lib/types/poll';
 
 	interface Props {
@@ -15,6 +16,24 @@
 	}
 
 	let { movie, onremove, showRemove = false, compact = false }: Props = $props();
+
+	// Check cache for poster if not provided (handles selection before poster loads)
+	let cachedPoster = $state<string | null>(null);
+
+	$effect(() => {
+		// If no poster, check cache periodically (poster may be fetched after selection)
+		if (!movie.poster && !cachedPoster) {
+			const checkCache = () => {
+				const cached = getCachedPoster(movie.imdbID);
+				if (cached) cachedPoster = cached;
+			};
+			checkCache(); // Check immediately
+			const timer = setTimeout(checkCache, 1000); // Re-check after poster fetch likely completes
+			return () => clearTimeout(timer);
+		}
+	});
+
+	const poster = $derived(movie.poster ?? cachedPoster);
 </script>
 
 <div class="group relative">
@@ -35,9 +54,9 @@
 			)}
 		>
 			N/A
-			{#if movie.poster}
+			{#if poster}
 				<img
-					src={movie.poster}
+					src={poster}
 					alt={movie.title}
 					class="absolute inset-0 h-full w-full rounded object-cover"
 					onerror={(e) => e.currentTarget.remove()}
