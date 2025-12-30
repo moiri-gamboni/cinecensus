@@ -18,7 +18,7 @@ export const GET: RequestHandler = async ({ url, platform }) => {
 	}
 
 	try {
-		// Don't filter by type - we support movies, TV series, shorts, etc.
+		// OMDb only supports single type filter, so we fetch all and filter in parseOMDbResponse
 		const omdbUrl = `https://www.omdbapi.com/?apikey=${apiKey}&s=${encodeURIComponent(query)}`;
 		const response = await fetch(omdbUrl);
 		const data: OMDbSearchResponse = await response.json();

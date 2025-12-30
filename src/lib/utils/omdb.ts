@@ -10,13 +10,16 @@ export function parseOMDbResponse(data: OMDbSearchResponse): { results: Movie[];
 		return { results: [] };
 	}
 
+	const excludedTypes = ['game', 'episode'];
+
 	const results: Movie[] =
-		data.Search?.map((m) => ({
-			imdbID: m.imdbID,
-			title: m.Title,
-			year: m.Year,
-			poster: m.Poster !== 'N/A' ? m.Poster : null
-		})) ?? [];
+		data.Search?.filter((m) => !excludedTypes.includes(m.Type.toLowerCase()))
+			.map((m) => ({
+				imdbID: m.imdbID,
+				title: m.Title,
+				year: m.Year,
+				poster: m.Poster !== 'N/A' ? m.Poster : null
+			})) ?? [];
 
 	return { results };
 }
