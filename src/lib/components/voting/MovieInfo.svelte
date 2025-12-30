@@ -10,10 +10,14 @@
 		movie: Movie;
 	}
 
-	let { movie }: Props = $props();
+	interface Children {
+		children?: import('svelte').Snippet;
+	}
+
+	let { movie, children }: Props & Children = $props();
 </script>
 
-<div class="relative flex h-12 w-8 items-center justify-center rounded bg-muted text-xs text-muted-foreground">
+<div class="relative flex h-12 w-8 shrink-0 items-center justify-center rounded bg-muted text-xs text-muted-foreground">
 	N/A
 	{#if movie.poster}
 		<img
@@ -46,6 +50,10 @@
 		<p class="mt-1 line-clamp-2 text-xs text-muted-foreground">{movie.plot}</p>
 	{/if}
 </div>
+
+{#if children}
+	{@render children()}
+{/if}
 
 <Button
 	variant="ghost"
