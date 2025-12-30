@@ -28,22 +28,22 @@
 			showRemove && 'pr-12'
 		)}
 	>
-		{#if movie.poster}
-			<img
-				src={movie.poster}
-				alt={movie.title}
-				class={cn('rounded object-cover', compact ? 'h-10 w-7' : 'h-16 w-11')}
-			/>
-		{:else}
-			<div
-				class={cn(
-					'flex items-center justify-center rounded bg-muted text-xs text-muted-foreground',
-					compact ? 'h-10 w-7' : 'h-16 w-11'
-				)}
-			>
-				N/A
-			</div>
-		{/if}
+		<div
+			class={cn(
+				'relative flex items-center justify-center rounded bg-muted text-xs text-muted-foreground',
+				compact ? 'h-10 w-7' : 'h-16 w-11'
+			)}
+		>
+			N/A
+			{#if movie.poster}
+				<img
+					src={movie.poster}
+					alt={movie.title}
+					class="absolute inset-0 h-full w-full rounded object-cover"
+					onerror={(e) => e.currentTarget.remove()}
+				/>
+			{/if}
+		</div>
 
 		<div class="flex min-w-0 flex-1 flex-col">
 			<span class={cn('truncate font-medium', compact && 'text-sm')}>{movie.title}</span>

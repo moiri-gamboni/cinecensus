@@ -52,13 +52,17 @@
 					onCheckedChange={() => toggle(movie.imdbID)}
 					{disabled}
 				/>
-				{#if movie.poster}
-					<img src={movie.poster} alt={movie.title} class="h-12 w-8 rounded object-cover" />
-				{:else}
-					<div class="flex h-12 w-8 items-center justify-center rounded bg-muted text-xs text-muted-foreground">
-						N/A
-					</div>
-				{/if}
+				<div class="relative flex h-12 w-8 items-center justify-center rounded bg-muted text-xs text-muted-foreground">
+					N/A
+					{#if movie.poster}
+						<img
+							src={movie.poster}
+							alt={movie.title}
+							class="absolute inset-0 h-full w-full rounded object-cover"
+							onerror={(e) => e.currentTarget.remove()}
+						/>
+					{/if}
+				</div>
 				<div class="flex flex-col">
 					<span class="font-medium">{movie.title}</span>
 					<span class="text-sm text-muted-foreground">{movie.year}</span>

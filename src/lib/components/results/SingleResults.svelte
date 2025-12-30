@@ -34,17 +34,17 @@
 					</span>
 				{/if}
 
-				{#if result.movie.poster}
-					<img
-						src={result.movie.poster}
-						alt={result.movie.title}
-						class="h-12 w-8 rounded object-cover"
-					/>
-				{:else}
-					<div class="flex h-12 w-8 items-center justify-center rounded bg-muted text-xs text-muted-foreground">
-						N/A
-					</div>
-				{/if}
+				<div class="relative flex h-12 w-8 items-center justify-center rounded bg-muted text-xs text-muted-foreground">
+					N/A
+					{#if result.movie.poster}
+						<img
+							src={result.movie.poster}
+							alt={result.movie.title}
+							class="absolute inset-0 h-full w-full rounded object-cover"
+							onerror={(e) => e.currentTarget.remove()}
+						/>
+					{/if}
+				</div>
 
 				<div class="flex min-w-0 flex-1 flex-col gap-2">
 					<div class="flex items-center justify-between gap-2">

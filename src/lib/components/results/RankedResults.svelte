@@ -40,13 +40,17 @@
 			<Trophy class="mx-auto size-8 text-yellow-500" />
 			<h3 class="mt-2 text-lg font-semibold">Winner</h3>
 			<div class="mt-3 flex items-center justify-center gap-3">
-				{#if results.winner.poster}
-					<img
-						src={results.winner.poster}
-						alt={results.winner.title}
-						class="h-20 w-14 rounded object-cover shadow-lg"
-					/>
-				{/if}
+				<div class="relative flex h-20 w-14 items-center justify-center rounded bg-muted text-xs text-muted-foreground shadow-lg">
+					N/A
+					{#if results.winner.poster}
+						<img
+							src={results.winner.poster}
+							alt={results.winner.title}
+							class="absolute inset-0 h-full w-full rounded object-cover"
+							onerror={(e) => e.currentTarget.remove()}
+						/>
+					{/if}
+				</div>
 				<div class="text-left">
 					<p class="text-xl font-bold">{results.winner.title}</p>
 					<p class="text-muted-foreground">{results.winner.year}</p>
@@ -104,17 +108,17 @@
 										isEliminated && 'bg-destructive/10 opacity-60'
 									)}
 								>
+									<div class="relative flex h-10 w-7 items-center justify-center rounded bg-muted text-xs text-muted-foreground">
+									N/A
 									{#if movie.poster}
 										<img
 											src={movie.poster}
 											alt={movie.title}
-											class="h-10 w-7 rounded object-cover"
+											class="absolute inset-0 h-full w-full rounded object-cover"
+											onerror={(e) => e.currentTarget.remove()}
 										/>
-									{:else}
-										<div class="flex h-10 w-7 items-center justify-center rounded bg-muted text-xs">
-											N/A
-										</div>
 									{/if}
+								</div>
 									<div class="flex min-w-0 flex-1 flex-col gap-1">
 										<div class="flex items-center justify-between">
 											<span class="truncate text-sm font-medium">{movie.title}</span>
