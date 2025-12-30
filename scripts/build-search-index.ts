@@ -20,7 +20,7 @@ const OUTPUT_FILE = join(STATIC_DIR, 'search-index.json');
 
 // MiniSearch configuration - must match runtime config exactly
 const MINISEARCH_OPTIONS = {
-	fields: ['t'], // Search the title field
+	fields: ['t', 'y'], // Search title and year
 	storeFields: ['id', 't', 'y', 'r', 'v'], // Store all fields for retrieval
 	idField: 'id'
 };
