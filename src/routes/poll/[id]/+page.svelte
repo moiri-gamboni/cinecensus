@@ -2,11 +2,11 @@
 	import { enhance } from '$app/forms';
 	import { goto } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
-	import { page } from '$app/state';
 	import Loader2 from '@lucide/svelte/icons/loader-2';
 	import Vote from '@lucide/svelte/icons/vote';
 	import Share2 from '@lucide/svelte/icons/share-2';
 	import Check from '@lucide/svelte/icons/check';
+	import BarChart3 from '@lucide/svelte/icons/bar-chart-3';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Badge } from '$lib/components/ui/badge/index.js';
 	import * as Card from '$lib/components/ui/card/index.js';
@@ -65,12 +65,7 @@
 		setTimeout(() => (copied = false), 2000);
 	}
 
-	// If already voted, redirect to results
-	$effect(() => {
-		if (data.hasVoted || votedPolls.hasVoted(data.poll.id)) {
-			goto(`/poll/${data.poll.id}/results`);
-		}
-	});
+	const hasAlreadyVoted = $derived(data.hasVoted || votedPolls.hasVoted(data.poll.id));
 </script>
 
 <svelte:head>
@@ -89,16 +84,31 @@
 			</div>
 		</div>
 
-		<Button variant="outline" onclick={copyLink}>
-			{#if copied}
-				<Check class="mr-2 size-4" />
-				Copied!
-			{:else}
-				<Share2 class="mr-2 size-4" />
-				Share poll
-			{/if}
-		</Button>
+		<div class="flex gap-2">
+			<Button variant="outline" href="/poll/{data.poll.id}/results">
+				<BarChart3 class="mr-2 size-4" />
+				View results
+			</Button>
+			<Button variant="outline" onclick={copyLink}>
+				{#if copied}
+					<Check class="mr-2 size-4" />
+					Copied!
+				{:else}
+					<Share2 class="mr-2 size-4" />
+					Share poll
+				{/if}
+			</Button>
+		</div>
 	</div>
+
+	{#if hasAlreadyVoted}
+		<div class="rounded-lg border border-green-200 bg-green-50 p-4 dark:border-green-900 dark:bg-green-950">
+			<p class="flex items-center gap-2 text-sm text-green-800 dark:text-green-200">
+				<Check class="size-4" />
+				You've already voted in this poll.
+			</p>
+		</div>
+	{/if}
 
 	<Card.Root>
 		<Card.Header>
