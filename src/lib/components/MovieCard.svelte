@@ -1,5 +1,6 @@
 <script lang="ts">
 	import X from '@lucide/svelte/icons/x';
+	import Loader2 from '@lucide/svelte/icons/loader-2';
 	import Star from '@lucide/svelte/icons/star';
 	import Users from '@lucide/svelte/icons/users';
 	import { Button } from '$lib/components/ui/button/index.js';
@@ -18,22 +19,26 @@
 	let { movie, onremove, showRemove = false, compact = false }: Props = $props();
 
 	// Check cache for poster if not provided (handles selection before poster loads)
-	let cachedPoster = $state<string | null>(null);
+	// undefined = not in cache (might be fetching), null = confirmed no poster, string = has poster
+	let cacheResult = $state<string | null | undefined>(undefined);
 
 	$effect(() => {
-		// If no poster, check cache periodically (poster may be fetched after selection)
-		if (!movie.poster && !cachedPoster) {
+		// If no poster from props, check cache periodically
+		if (!movie.poster) {
 			const checkCache = () => {
 				const cached = getCachedPoster(movie.imdbID);
-				if (cached) cachedPoster = cached;
+				cacheResult = cached;
 			};
 			checkCache(); // Check immediately
-			const timer = setTimeout(checkCache, 1000); // Re-check after poster fetch likely completes
+			// Re-check after poster fetch likely completes (only if still waiting)
+			const timer = setTimeout(checkCache, 1000);
 			return () => clearTimeout(timer);
 		}
 	});
 
-	const poster = $derived(movie.poster ?? cachedPoster);
+	const poster = $derived(movie.poster ?? (cacheResult || null));
+	// Show loader if no poster from props AND cache hasn't confirmed null
+	const isLoading = $derived(!movie.poster && cacheResult === undefined);
 </script>
 
 <div class="group relative">
@@ -53,7 +58,11 @@
 				compact ? 'h-10 w-7' : 'h-16 w-11'
 			)}
 		>
-			N/A
+			{#if isLoading}
+				<Loader2 class="size-4 animate-spin" />
+			{:else}
+				N/A
+			{/if}
 			{#if poster}
 				<img
 					src={poster}
