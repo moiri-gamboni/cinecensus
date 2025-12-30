@@ -69,7 +69,7 @@
 		<Button
 			variant="ghost"
 			size="icon"
-			class="absolute right-2 top-1/2 size-8 -translate-y-1/2 text-destructive hover:text-destructive"
+			class="absolute right-2 top-1/2 size-8 -translate-y-1/2 text-white hover:text-white/80"
 			onclick={onremove}
 		>
 			<X class="size-4" />
