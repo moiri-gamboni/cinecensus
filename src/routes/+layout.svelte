@@ -3,6 +3,7 @@
 	import { onMount } from 'svelte';
 	import { ModeWatcher } from 'mode-watcher';
 	import { Toaster } from '$lib/components/ui/sonner/index.js';
+	import * as Tooltip from '$lib/components/ui/tooltip/index.js';
 	import ModeToggle from '$lib/components/ModeToggle.svelte';
 	import Film from '@lucide/svelte/icons/film';
 	import { preload } from '$lib/utils/movie-search';
@@ -22,6 +23,7 @@
 
 <ModeWatcher />
 <Toaster richColors />
+<Tooltip.Provider>
 
 <div class="min-h-screen bg-background text-foreground">
 	<header class="sticky top-0 z-50 border-b border-border/40 bg-background/80 backdrop-blur-sm">
@@ -42,3 +44,5 @@
 		<p>Create movie polls and vote with friends</p>
 	</footer>
 </div>
+
+</Tooltip.Provider>

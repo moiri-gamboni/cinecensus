@@ -7,6 +7,7 @@
 	import { Input } from '$lib/components/ui/input/index.js';
 	import { Label } from '$lib/components/ui/label/index.js';
 	import * as Card from '$lib/components/ui/card/index.js';
+	import * as Tooltip from '$lib/components/ui/tooltip/index.js';
 	import MovieSearch from '$lib/components/MovieSearch.svelte';
 	import MovieCard from '$lib/components/MovieCard.svelte';
 	import BulkPasteDialog from '$lib/components/BulkPasteDialog.svelte';
@@ -20,6 +21,11 @@
 	let submitting = $state(false);
 
 	const excludeIds = $derived(movies.map((m) => m.imdbID));
+	const disabledReason = $derived.by(() => {
+		if (!title.trim()) return 'Please enter a poll title';
+		if (movies.length < 2) return `Add ${2 - movies.length} more movie${movies.length === 1 ? '' : 's'}`;
+		return null;
+	});
 
 	function addMovie(movie: Movie) {
 		if (!movies.some((m) => m.imdbID === movie.imdbID)) {
@@ -139,21 +145,28 @@
 			</div>
 		</Card.Content>
 
-		<Card.Footer>
-			<Button
-				class="w-full"
-				size="lg"
-				disabled={submitting || !title.trim() || movies.length < 2}
-				onclick={handleSubmit}
-			>
-				{#if submitting}
-					<Loader2 class="mr-2 size-5 animate-spin" />
-					Creating...
-				{:else}
-					<Plus class="mr-2 size-5" />
-					Create Poll
-				{/if}
-			</Button>
+		<Card.Footer class="w-full">
+			<Tooltip.Root disabled={!disabledReason} delayDuration={0}>
+				<Tooltip.Trigger class="w-full">
+					<Button
+						class="w-full"
+						size="lg"
+						disabled={submitting || !!disabledReason}
+						onclick={handleSubmit}
+					>
+						{#if submitting}
+							<Loader2 class="mr-2 size-5 animate-spin" />
+							Creating...
+						{:else}
+							<Plus class="mr-2 size-5" />
+							Create Poll
+						{/if}
+					</Button>
+				</Tooltip.Trigger>
+				<Tooltip.Content>
+					{disabledReason}
+				</Tooltip.Content>
+			</Tooltip.Root>
 		</Card.Footer>
 	</Card.Root>
 </div>
