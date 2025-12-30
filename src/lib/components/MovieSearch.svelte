@@ -25,11 +25,13 @@
 
 	let currentQuery = $state(''); // Track the current query to avoid stale updates
 	let hasFetchedAll = $state(false); // Track if we've fetched all 20 posters
+	let failedPosters = $state<Set<string>>(new Set()); // Track posters that failed to load
 
 	// Immediately search local index (no debounce)
 	async function searchLocal(query: string) {
 		currentQuery = query; // Track current query for stale detection
 		hasFetchedAll = false; // Reset on new query
+		failedPosters = new Set(); // Reset failed posters on new query
 
 		if (query.length < 2) {
 			results = [];
@@ -183,20 +185,23 @@
 						class="flex items-center gap-3 py-2"
 					>
 						<div class="relative flex h-12 w-8 items-center justify-center rounded bg-muted text-xs text-muted-foreground">
-							<!-- Fallback content (shown if no poster or image fails to load) -->
-							{#if fetchingPosters && !movie.poster}
+							<!-- Fallback: loader while fetching or image loading, N/A if no poster -->
+							{#if (movie.poster && !failedPosters.has(movie.imdbID)) || fetchingPosters}
 								<Loader2 class="size-4 animate-spin" />
 							{:else}
 								N/A
 							{/if}
 
-							<!-- Image overlays on top, removes itself on error -->
+							<!-- Image overlays on top, tracks failures -->
 							{#if movie.poster}
 								<img
 									src={movie.poster}
 									alt={movie.title}
 									class="absolute inset-0 h-full w-full rounded object-cover"
-									onerror={(e) => e.currentTarget.remove()}
+									onerror={(e) => {
+										failedPosters = new Set([...failedPosters, movie.imdbID]);
+										e.currentTarget.remove();
+									}}
 								/>
 							{/if}
 						</div>
