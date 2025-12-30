@@ -1,6 +1,7 @@
+import { browser } from '$app/environment';
 import { toImdbId, type IMDbTitle } from '$lib/types/imdb';
 import type { Movie } from '$lib/types/poll';
-import type { WorkerMessage, WorkerResponse } from '$lib/workers/search.worker';
+import type { WorkerMessage, WorkerResponse } from '$lib/workers/search.types';
 
 let worker: Worker | null = null;
 let workerReady = false;
@@ -10,8 +11,13 @@ const pendingRequests = new Map<number, { resolve: (results: IMDbTitle[]) => voi
 
 /**
  * Get or create the search worker.
+ * Only call from browser context (onMount, event handlers).
  */
 function getWorker(): Worker {
+	if (!browser) {
+		throw new Error('Search worker can only be used in browser');
+	}
+
 	if (!worker) {
 		worker = new Worker(new URL('../workers/search.worker.ts', import.meta.url), { type: 'module' });
 

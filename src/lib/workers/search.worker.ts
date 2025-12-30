@@ -3,6 +3,7 @@
  */
 import MiniSearch, { type SearchResult } from 'minisearch';
 import type { IMDbTitle } from '$lib/types/imdb';
+import type { WorkerMessage, WorkerResponse } from './search.types';
 
 // SearchResult with stored fields included
 type SearchResultWithFields = SearchResult & {
@@ -20,15 +21,6 @@ const MINISEARCH_OPTIONS = {
 };
 
 let miniSearch: MiniSearch<IMDbTitle> | null = null;
-
-export type WorkerMessage =
-	| { type: 'init' }
-	| { type: 'search'; query: string; limit: number; requestId: number };
-
-export type WorkerResponse =
-	| { type: 'ready' }
-	| { type: 'results'; results: IMDbTitle[]; requestId: number }
-	| { type: 'error'; error: string };
 
 self.onmessage = async (e: MessageEvent<WorkerMessage>) => {
 	const { type } = e.data;
