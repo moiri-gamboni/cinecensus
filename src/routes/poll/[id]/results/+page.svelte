@@ -43,9 +43,9 @@
 <div class="space-y-6">
 	<div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
 		<div>
-			<Button variant="ghost" size="sm" href="/" class="-ml-2 mb-2">
+			<Button variant="ghost" size="sm" href="/poll/{data.poll.id}" class="-ml-2 mb-2">
 				<ArrowLeft class="mr-1 size-4" />
-				Create new poll
+				Change my vote
 			</Button>
 			<h1 class="text-2xl font-bold tracking-tight sm:text-3xl">{data.poll.title}</h1>
 			<div class="mt-2 flex flex-wrap items-center gap-2">
