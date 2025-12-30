@@ -165,7 +165,7 @@
 <Command.Root shouldFilter={false} class="rounded-lg border">
 	<Command.Input
 		placeholder={placeholder}
-		value={searchQuery}
+		bind:value={searchQuery}
 		oninput={(e) => handleInput(e.currentTarget.value)}
 	/>
 	<Command.List class="empty:hidden" onscroll={handleListScroll}>
