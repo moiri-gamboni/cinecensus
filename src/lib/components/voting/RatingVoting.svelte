@@ -1,9 +1,7 @@
 <script lang="ts">
 	import Star from '@lucide/svelte/icons/star';
-	import Users from '@lucide/svelte/icons/users';
-	import ExternalLink from '@lucide/svelte/icons/external-link';
 	import MovieFilter from '$lib/components/MovieFilter.svelte';
-	import { formatVotes } from '$lib/utils/format';
+	import MovieInfo from './MovieInfo.svelte';
 	import type { Movie, RatingVoteData } from '$lib/types/poll';
 
 	interface Props {
@@ -51,46 +49,7 @@
 		{#each filteredMovies as movie (movie.imdbID)}
 			{@const currentRating = getRating(movie.imdbID)}
 			<div class="flex items-center gap-3 rounded-lg border p-3">
-				<div class="relative flex h-12 w-8 items-center justify-center rounded bg-muted text-xs text-muted-foreground">
-					N/A
-					{#if movie.poster}
-						<img
-							src={movie.poster}
-							alt={movie.title}
-							class="absolute inset-0 h-full w-full rounded object-cover"
-							onerror={(e) => e.currentTarget.remove()}
-						/>
-					{/if}
-				</div>
-
-				<div class="flex min-w-0 flex-1 flex-col">
-					<span class="truncate font-medium">{movie.title}</span>
-					<div class="flex items-center gap-2 text-sm text-muted-foreground">
-						<span>{movie.year}</span>
-						{#if movie.rating}
-							<span class="flex items-center gap-0.5">
-								<Star class="size-3 fill-yellow-400 text-yellow-400" />
-								{movie.rating}
-							</span>
-						{/if}
-						{#if movie.votes}
-							<span class="flex items-center gap-0.5">
-								<Users class="size-3" />
-								{formatVotes(movie.votes)}
-							</span>
-						{/if}
-					</div>
-				</div>
-
-				<a
-					href="https://www.imdb.com/title/{movie.imdbID}"
-					target="_blank"
-					rel="noopener noreferrer"
-					class="shrink-0 rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
-					aria-label="View on IMDb"
-				>
-					<ExternalLink class="size-4" />
-				</a>
+				<MovieInfo {movie} />
 
 				<div class="flex gap-0.5">
 					{#each [1, 2, 3, 4, 5] as star}

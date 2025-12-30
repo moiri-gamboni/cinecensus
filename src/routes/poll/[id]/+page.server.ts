@@ -77,17 +77,16 @@ export const actions: Actions = {
 			});
 		}
 
-		const { error: voteError } = await supabase.from('votes').insert({
-			poll_id: params.id,
-			voter_fingerprint: fingerprint,
-			vote_data: voteData
-		});
+		const { error: voteError } = await supabase.from('votes').upsert(
+			{
+				poll_id: params.id,
+				voter_fingerprint: fingerprint,
+				vote_data: voteData
+			},
+			{ onConflict: 'poll_id,voter_fingerprint' }
+		);
 
 		if (voteError) {
-			if (voteError.code === '23505') {
-				// Unique violation - already voted
-				throw redirect(303, `/poll/${params.id}/results`);
-			}
 			console.error('Vote error:', voteError);
 			throw error(500, 'Failed to submit vote');
 		}

@@ -102,17 +102,17 @@
 	</div>
 
 	{#if hasAlreadyVoted}
-		<div class="rounded-lg border border-green-200 bg-green-50 p-4 dark:border-green-900 dark:bg-green-950">
-			<p class="flex items-center gap-2 text-sm text-green-800 dark:text-green-200">
+		<div class="rounded-lg border border-blue-200 bg-blue-50 p-4 dark:border-blue-900 dark:bg-blue-950">
+			<p class="flex items-center gap-2 text-sm text-blue-800 dark:text-blue-200">
 				<Check class="size-4" />
-				You've already voted in this poll.
+				You've already voted. You can change your vote below.
 			</p>
 		</div>
 	{/if}
 
 	<Card.Root>
 		<Card.Header>
-			<Card.Title>Cast your vote</Card.Title>
+			<Card.Title>{hasAlreadyVoted ? 'Change your vote' : 'Cast your vote'}</Card.Title>
 			<Card.Description>
 				{#if data.poll.voting_method === 'approval'}
 					Vote for all movies you'd be happy to watch
@@ -185,10 +185,10 @@
 				>
 					{#if submitting}
 						<Loader2 class="mr-2 size-5 animate-spin" />
-						Submitting...
+						{hasAlreadyVoted ? 'Updating...' : 'Submitting...'}
 					{:else}
 						<Vote class="mr-2 size-5" />
-						Submit vote
+						{hasAlreadyVoted ? 'Update vote' : 'Submit vote'}
 					{/if}
 				</Button>
 			</form>
