@@ -143,12 +143,6 @@
 		placeholder={placeholder}
 		value={searchQuery}
 		oninput={(e) => handleInput(e.currentTarget.value)}
-		onkeydown={(e) => {
-			if (e.key === 'Enter' && results.length > 0) {
-				e.preventDefault();
-				handleSelect(results[0]);
-			}
-		}}
 	/>
 	<Command.List class="empty:hidden">
 		{#if indexLoading}
