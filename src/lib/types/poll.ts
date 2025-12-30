@@ -16,6 +16,7 @@ export interface Poll {
 	voting_method: VotingMethod;
 	movies: Movie[];
 	created_at: string;
+	updated_at: string;
 }
 
 export interface Vote {
