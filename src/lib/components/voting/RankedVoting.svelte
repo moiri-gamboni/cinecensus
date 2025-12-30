@@ -1,4 +1,7 @@
 <script lang="ts">
+	import { flip } from 'svelte/animate';
+	import { dndzone } from 'svelte-dnd-action';
+	import GripVertical from '@lucide/svelte/icons/grip-vertical';
 	import MovieFilter from '$lib/components/MovieFilter.svelte';
 	import MovieInfo from './MovieInfo.svelte';
 	import { cn } from '$lib/utils.js';
@@ -16,6 +19,8 @@
 	let matchingIds = $state<Set<string>>(new Set());
 	let filterQuery = $state('');
 
+	const flipDurationMs = 200;
+
 	function handleFilter(filtered: Movie[], query: string) {
 		filterQuery = query;
 		matchingIds = new Set(filtered.map((m) => m.imdbID));
@@ -25,35 +30,30 @@
 		return filterQuery !== '' && matchingIds.has(imdbID);
 	}
 
+	// Items for dnd-zone need an `id` property
+	type DndItem = Movie & { id: string };
+
 	// Create ordered list based on current value or default order
-	let orderedMovies = $derived.by(() => {
-		if (value.length === 0) {
-			return [...movies];
-		}
-		return value
-			.map((id) => movies.find((m) => m.imdbID === id))
-			.filter((m): m is Movie => m !== undefined);
+	let items = $state<DndItem[]>([]);
+
+	// Sync items when movies or value changes
+	$effect(() => {
+		const ordered = value.length === 0
+			? [...movies]
+			: value
+				.map((id) => movies.find((m) => m.imdbID === id))
+				.filter((m): m is Movie => m !== undefined);
+
+		items = ordered.map((m) => ({ ...m, id: m.imdbID }));
 	});
 
-	let draggedIndex = $state<number | null>(null);
-
-	function handleDragStart(index: number) {
-		if (disabled) return;
-		draggedIndex = index;
+	function handleDndConsider(e: CustomEvent<{ items: DndItem[] }>) {
+		items = e.detail.items;
 	}
 
-	function handleDrop(targetIndex: number) {
-		if (disabled || draggedIndex === null || draggedIndex === targetIndex) {
-			draggedIndex = null;
-			return;
-		}
-
-		const newOrder = [...orderedMovies];
-		const [removed] = newOrder.splice(draggedIndex, 1);
-		newOrder.splice(targetIndex, 0, removed);
-
-		onchange(newOrder.map((m) => m.imdbID));
-		draggedIndex = null;
+	function handleDndFinalize(e: CustomEvent<{ items: DndItem[] }>) {
+		items = e.detail.items;
+		onchange(items.map((m) => m.imdbID));
 	}
 
 	// Initialize value if empty
@@ -73,23 +73,22 @@
 		<MovieFilter {movies} onfilter={handleFilter} placeholder="Find a movie to reorder..." />
 	{/if}
 
-	<div class="space-y-2">
-		{#each orderedMovies as movie, index (movie.imdbID)}
+	<div
+		class="space-y-2"
+		use:dndzone={{ items, flipDurationMs, dragDisabled: disabled, dropTargetStyle: {} }}
+		onconsider={handleDndConsider}
+		onfinalize={handleDndFinalize}
+	>
+		{#each items as movie (movie.id)}
 			<div
 				class={cn(
-					'flex items-center gap-2 rounded-lg border bg-card p-3 transition-all',
+					'flex items-center gap-2 rounded-lg border bg-card p-3',
 					!disabled && 'cursor-grab active:cursor-grabbing',
-					draggedIndex === index && 'opacity-50',
-					draggedIndex !== null && draggedIndex !== index && 'ring-2 ring-primary',
 					isHighlighted(movie.imdbID) && 'border-primary bg-primary/5'
 				)}
-				role="listitem"
-				draggable={!disabled}
-				ondragstart={() => handleDragStart(index)}
-				ondragend={() => (draggedIndex = null)}
-				ondragover={(e) => e.preventDefault()}
-				ondrop={() => handleDrop(index)}
+				animate:flip={{ duration: flipDurationMs }}
 			>
+				<GripVertical class="size-5 shrink-0 text-muted-foreground" />
 				<MovieInfo {movie} />
 			</div>
 		{/each}
