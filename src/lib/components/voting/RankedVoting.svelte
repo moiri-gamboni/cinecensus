@@ -1,7 +1,11 @@
 <script lang="ts">
 	import GripVertical from '@lucide/svelte/icons/grip-vertical';
+	import Star from '@lucide/svelte/icons/star';
+	import Users from '@lucide/svelte/icons/users';
+	import ExternalLink from '@lucide/svelte/icons/external-link';
 	import MovieFilter from '$lib/components/MovieFilter.svelte';
 	import { cn } from '$lib/utils.js';
+	import { formatVotes } from '$lib/utils/format';
 	import type { Movie, RankedVoteData } from '$lib/types/poll';
 
 	interface Props {
@@ -129,8 +133,32 @@
 
 				<div class="flex min-w-0 flex-1 flex-col">
 					<span class="truncate font-medium">{movie.title}</span>
-					<span class="text-sm text-muted-foreground">{movie.year}</span>
+					<div class="flex items-center gap-2 text-sm text-muted-foreground">
+						<span>{movie.year}</span>
+						{#if movie.rating}
+							<span class="flex items-center gap-0.5">
+								<Star class="size-3 fill-yellow-400 text-yellow-400" />
+								{movie.rating}
+							</span>
+						{/if}
+						{#if movie.votes}
+							<span class="flex items-center gap-0.5">
+								<Users class="size-3" />
+								{formatVotes(movie.votes)}
+							</span>
+						{/if}
+					</div>
 				</div>
+
+				<a
+					href="https://www.imdb.com/title/{movie.imdbID}"
+					target="_blank"
+					rel="noopener noreferrer"
+					class="shrink-0 rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
+					aria-label="View on IMDb"
+				>
+					<ExternalLink class="size-4" />
+				</a>
 
 				<div class="flex flex-col gap-0.5">
 					<button
