@@ -29,7 +29,7 @@
 
 	function addMovie(movie: Movie) {
 		if (!movies.some((m) => m.imdbID === movie.imdbID)) {
-			movies = [...movies, movie];
+			movies = [movie, ...movies];
 		}
 	}
 
