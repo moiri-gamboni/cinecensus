@@ -148,20 +148,23 @@
 		<Card.Footer class="w-full">
 			<Tooltip.Root disabled={!disabledReason} delayDuration={0}>
 				<Tooltip.Trigger class="w-full">
-					<Button
-						class="w-full"
-						size="lg"
-						disabled={submitting || !!disabledReason}
-						onclick={handleSubmit}
-					>
-						{#if submitting}
-							<Loader2 class="mr-2 size-5 animate-spin" />
-							Creating...
-						{:else}
-							<Plus class="mr-2 size-5" />
-							Create Poll
-						{/if}
-					</Button>
+					{#snippet child({ props })}
+						<Button
+							{...props}
+							class="w-full"
+							size="lg"
+							disabled={submitting || !!disabledReason}
+							onclick={handleSubmit}
+						>
+							{#if submitting}
+								<Loader2 class="mr-2 size-5 animate-spin" />
+								Creating...
+							{:else}
+								<Plus class="mr-2 size-5" />
+								Create Poll
+							{/if}
+						</Button>
+					{/snippet}
 				</Tooltip.Trigger>
 				<Tooltip.Content>
 					{disabledReason}
