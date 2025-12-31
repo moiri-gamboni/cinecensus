@@ -49,7 +49,7 @@ function tallyApproval(
 			count: counts[m.imdbID],
 			percentage: votes.length ? (counts[m.imdbID] / votes.length) * 100 : 0
 		}))
-		.sort((a, b) => b.count - a.count);
+		.sort((a, b) => b.count - a.count || (b.movie.rating ?? 0) - (a.movie.rating ?? 0));
 
 	return {
 		method: 'approval',
@@ -75,7 +75,7 @@ function tallySingle(
 			count: counts[m.imdbID],
 			percentage: votes.length ? (counts[m.imdbID] / votes.length) * 100 : 0
 		}))
-		.sort((a, b) => b.count - a.count);
+		.sort((a, b) => b.count - a.count || (b.movie.rating ?? 0) - (a.movie.rating ?? 0));
 
 	return {
 		method: 'single',
@@ -136,8 +136,12 @@ function tallyRankedChoice(
 			.filter(([, c]) => c === lowestCount)
 			.map(([id]) => id);
 
-		// Eliminate the first one found (could be randomized for fairness)
-		const toEliminate = lowestCandidates[0];
+		// Eliminate the one with lowest IMDb rating among tied candidates
+		const toEliminate = lowestCandidates.sort((a, b) => {
+			const ratingA = movieMap.get(a)?.rating ?? 0;
+			const ratingB = movieMap.get(b)?.rating ?? 0;
+			return ratingA - ratingB; // Lowest rating first
+		})[0];
 
 		rounds.push({
 			counts: { ...counts },
@@ -199,7 +203,12 @@ function tallyRating(
 
 			return { movie: m, median, mean, ratings: r };
 		})
-		.sort((a, b) => b.median - a.median || b.mean - a.mean);
+		.sort(
+			(a, b) =>
+				b.median - a.median ||
+				b.mean - a.mean ||
+				(b.movie.rating ?? 0) - (a.movie.rating ?? 0)
+		);
 
 	return {
 		method: 'rating',
