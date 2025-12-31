@@ -1,7 +1,9 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import type { OMDbSearchResponse, OMDbDetailResponse } from '$lib/types/omdb';
+import type { OMDbDetailResponse } from '$lib/types/omdb';
 import type { Movie } from '$lib/types/poll';
+import { searchBestMatch } from '$lib/utils/server-search';
+import { toImdbId } from '$lib/types/imdb';
 
 // GET: Fetch single movie by IMDb ID
 export const GET: RequestHandler = async ({ url, platform }) => {
@@ -47,15 +49,8 @@ export const GET: RequestHandler = async ({ url, platform }) => {
 	}
 };
 
-// POST: Resolve multiple titles to movies
-export const POST: RequestHandler = async ({ request, platform }) => {
-	const apiKey = platform?.env?.OMDB_API_KEY;
-
-	if (!apiKey) {
-		console.error('[Resolve] OMDB_API_KEY not configured');
-		return json({ error: 'OMDB_API_KEY not configured' }, { status: 500 });
-	}
-
+// POST: Resolve multiple titles to movies using local search index
+export const POST: RequestHandler = async ({ request, url }) => {
 	const { titles } = (await request.json()) as { titles: string[] };
 
 	if (!titles || !Array.isArray(titles)) {
@@ -66,6 +61,9 @@ export const POST: RequestHandler = async ({ request, platform }) => {
 	console.log(`[Resolve] Resolving ${titles.length} titles:`, titles);
 	const start = performance.now();
 
+	// Use origin for fetching the search index
+	const baseUrl = url.origin;
+
 	const results: (Movie | null)[] = await Promise.all(
 		titles.map(async (title) => {
 			const trimmed = title.trim();
@@ -75,27 +73,24 @@ export const POST: RequestHandler = async ({ request, platform }) => {
 			}
 
 			try {
-				const response = await fetch(
-					`https://www.omdbapi.com/?apikey=${apiKey}&s=${encodeURIComponent(trimmed)}&type=movie`
-				);
+				// Use local search with same ranking as autocomplete
+				const match = await searchBestMatch(trimmed, baseUrl);
 
-				const data: OMDbSearchResponse = await response.json();
-
-				if (data.Response === 'False' || !data.Search?.length) {
+				if (!match) {
 					console.log(`[Resolve] "${trimmed}" → no results`);
 					return null;
 				}
 
-				const first = data.Search[0];
-				const hasPoster = first.Poster !== 'N/A';
+				const imdbID = toImdbId(match.id);
 				console.log(
-					`[Resolve] "${trimmed}" → ${first.imdbID} "${first.Title}" (${first.Year}) ${hasPoster ? '🖼️' : '❌'}`
+					`[Resolve] "${trimmed}" → ${imdbID} "${match.t}" (${match.y}) ⭐${match.r ?? 0} 👥${match.v ?? 0}`
 				);
+
 				return {
-					imdbID: first.imdbID,
-					title: first.Title,
-					year: first.Year,
-					poster: hasPoster ? first.Poster : null
+					imdbID,
+					title: match.t,
+					year: String(match.y),
+					poster: null // Poster fetched separately via MovieCard
 				};
 			} catch (err) {
 				console.error(`[Resolve] "${trimmed}" failed:`, err);
