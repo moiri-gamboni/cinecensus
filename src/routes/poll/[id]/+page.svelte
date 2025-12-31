@@ -100,7 +100,7 @@
 
 	<!-- Open Graph -->
 	<meta property="og:title" content={data.poll.title} />
-	<meta property="og:description" content="Vote on {movies.length} movies • {methodLabels[data.poll.voting_method]}" />
+	<meta property="og:description" content="Vote on {movies.length} movies" />
 	<meta property="og:image" content={movies[0]?.poster || 'https://cinecensus.moiri.dev/og-image.jpg'} />
 	<meta property="og:type" content="website" />
 

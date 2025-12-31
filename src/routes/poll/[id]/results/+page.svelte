@@ -53,7 +53,7 @@
 
 	<!-- Open Graph -->
 	<meta property="og:title" content="Results: {data.poll.title}" />
-	<meta property="og:description" content="{data.voteCount} vote{data.voteCount === 1 ? '' : 's'} • {methodLabels[data.poll.voting_method]}" />
+	<meta property="og:description" content="{data.voteCount} vote{data.voteCount === 1 ? '' : 's'}" />
 	<meta property="og:image" content={movies[0]?.poster || 'https://cinecensus.moiri.dev/og-image.jpg'} />
 	<meta property="og:type" content="website" />
 
