@@ -48,6 +48,17 @@
 
 <svelte:head>
 	<title>Results: {data.poll.title} - CineCensus</title>
+	<meta name="description" content="Results for {data.poll.title} • {data.voteCount} vote{data.voteCount === 1 ? '' : 's'} • {methodLabels[data.poll.voting_method]}" />
+	<meta name="robots" content="noindex, nofollow" />
+
+	<!-- Open Graph -->
+	<meta property="og:title" content="Results: {data.poll.title}" />
+	<meta property="og:description" content="{data.voteCount} vote{data.voteCount === 1 ? '' : 's'} • {methodLabels[data.poll.voting_method]}" />
+	<meta property="og:image" content={movies[0]?.poster || 'https://cinecensus.moiri.dev/og-image.jpg'} />
+	<meta property="og:type" content="website" />
+
+	<!-- Twitter -->
+	<meta name="twitter:card" content="summary_large_image" />
 </svelte:head>
 
 <div class="space-y-6">

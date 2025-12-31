@@ -20,6 +20,33 @@
 <svelte:head>
 	<title>CineCensus - Movie Voting</title>
 	<meta name="description" content="Create and share movie polls with friends" />
+
+	<!-- Open Graph -->
+	<meta property="og:title" content="CineCensus - Movie Voting" />
+	<meta property="og:description" content="Create polls, add movies, share with friends, vote together" />
+	<meta property="og:image" content="https://cinecensus.moiri.dev/og-image.jpg" />
+	<meta property="og:url" content="https://cinecensus.moiri.dev" />
+	<meta property="og:type" content="website" />
+
+	<!-- Twitter -->
+	<meta name="twitter:card" content="summary_large_image" />
+	<meta name="twitter:title" content="CineCensus - Movie Voting" />
+	<meta name="twitter:description" content="Create polls, add movies, share with friends, vote together" />
+	<meta name="twitter:image" content="https://cinecensus.moiri.dev/og-image.jpg" />
+
+	<!-- Canonical -->
+	<link rel="canonical" href="https://cinecensus.moiri.dev" />
+
+	<!-- Structured Data -->
+	{@html `<script type="application/ld+json">${JSON.stringify({
+		"@context": "https://schema.org",
+		"@type": "WebApplication",
+		"name": "CineCensus",
+		"description": "Create and share movie polls with friends",
+		"url": "https://cinecensus.moiri.dev",
+		"applicationCategory": "Entertainment",
+		"operatingSystem": "Any"
+	})}</script>`}
 </svelte:head>
 
 <ModeWatcher />

@@ -95,6 +95,17 @@
 
 <svelte:head>
 	<title>{data.poll.title} - CineCensus</title>
+	<meta name="description" content="Vote on {movies.length} movies using {methodLabels[data.poll.voting_method]}" />
+	<meta name="robots" content="noindex, nofollow" />
+
+	<!-- Open Graph -->
+	<meta property="og:title" content={data.poll.title} />
+	<meta property="og:description" content="Vote on {movies.length} movies • {methodLabels[data.poll.voting_method]}" />
+	<meta property="og:image" content={movies[0]?.poster || 'https://cinecensus.moiri.dev/og-image.jpg'} />
+	<meta property="og:type" content="website" />
+
+	<!-- Twitter -->
+	<meta name="twitter:card" content="summary_large_image" />
 </svelte:head>
 
 <div class="space-y-6">
