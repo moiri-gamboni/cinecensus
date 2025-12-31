@@ -18,11 +18,11 @@
 </script>
 
 <svelte:head>
-	<title>CineCensus - Movie Voting</title>
+	<title>CineCensus - Movie Polls</title>
 	<meta name="description" content="Create and share movie polls with friends" />
 
 	<!-- Open Graph -->
-	<meta property="og:title" content="CineCensus - Movie Voting" />
+	<meta property="og:title" content="CineCensus - Movie Polls" />
 	<meta property="og:description" content="Create polls, add movies, share with friends, vote together" />
 	<meta property="og:image" content="https://cinecensus.moiri.dev/og-image.jpg" />
 	<meta property="og:url" content="https://cinecensus.moiri.dev" />
@@ -30,7 +30,7 @@
 
 	<!-- Twitter -->
 	<meta name="twitter:card" content="summary_large_image" />
-	<meta name="twitter:title" content="CineCensus - Movie Voting" />
+	<meta name="twitter:title" content="CineCensus - Movie Polls" />
 	<meta name="twitter:description" content="Create polls, add movies, share with friends, vote together" />
 	<meta name="twitter:image" content="https://cinecensus.moiri.dev/og-image.jpg" />
 

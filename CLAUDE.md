@@ -1,6 +1,6 @@
 # CineCensus
 
-Movie voting app: create polls, search movies, share links, vote together.
+Movie polls app: create polls, search movies, share links, vote together.
 
 ## Commands
 
