@@ -96,7 +96,7 @@
 		// fetchingPosters already true from schedulePosterFetch
 
 		try {
-			const { movies, newFromOMDb } = await fetchPostersAndMerge(results, query, visibleCount);
+			const movies = await fetchPostersAndMerge(results, visibleCount);
 
 			// Don't update if query changed during fetch
 			if (query !== currentQuery) {
@@ -105,21 +105,8 @@
 			}
 
 			// Update existing results with posters
-			console.log(`[Search] fetchPosters: updating results (${movies.length} movies, searchQuery="${searchQuery}")`);
+			console.log(`[Search] fetchPosters: updating results (${movies.length} movies)`);
 			results = movies;
-
-			// Merge new OMDb results (sorted by rating, but OMDb doesn't provide ratings)
-			// Insert at the end since we don't have vote counts to sort by
-			if (newFromOMDb.length > 0) {
-				const existingIds = new Set(results.map((m) => m.imdbID));
-				const filtered = newFromOMDb.filter(
-					(m) => !existingIds.has(m.imdbID) && !excludeIds.includes(m.imdbID)
-				);
-				if (filtered.length > 0) {
-					console.log(`[Search] Adding ${filtered.length} new movies from OMDb`);
-					results = [...results, ...filtered];
-				}
-			}
 
 			// Mark as fully fetched if we fetched all
 			if (visibleCount >= 20) {
@@ -130,10 +117,7 @@
 			// Non-fatal - we still have local results
 		} finally {
 			fetchingPosters = false;
-			console.log(`[Search] Poster fetch complete, ${results.length} total results, searchQuery="${searchQuery}"`);
-			if (searchQuery === '' && results.length > 0) {
-				console.warn(`[Search] BUG DETECTED: results populated but searchQuery is empty!`);
-			}
+			console.log(`[Search] Poster fetch complete, ${results.length} total results`);
 		}
 	}
 
