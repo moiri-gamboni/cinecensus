@@ -118,7 +118,8 @@ function tallyRankedChoice(
 		const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
 
 		if (sorted[0][1] > total / 2) {
-			// Winner found with majority
+			// Winner found with majority - update remaining to only the winner
+			remaining = [sorted[0][0]];
 			rounds.push({
 				counts: { ...counts },
 				eliminated: null,
