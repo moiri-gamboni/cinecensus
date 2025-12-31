@@ -30,6 +30,10 @@ interface OMDbSearchResult {
 // Track which queries we've already made this session
 const queriedTerms = new Set<string>();
 
+// Track in-flight poster fetches to avoid duplicate requests
+// Maps IMDb ID to a promise that resolves when the fetch attempt completes
+const inFlightFetches = new Map<string, Promise<void>>();
+
 /**
  * Get cached poster for an IMDb ID.
  */
@@ -244,6 +248,21 @@ export async function fetchPostersAndMerge(
 
 	console.log(`[Poster] Fetching ${newTerms.length} OMDb queries: [${newTerms.join(', ')}]`);
 
+	// Register in-flight fetches for all IDs we're trying to get posters for
+	// This prevents MovieCard from making duplicate requests
+	const idsBeingFetched = needPosters.map((m) => m.imdbID);
+	const resolvers: (() => void)[] = [];
+	for (const id of idsBeingFetched) {
+		if (!inFlightFetches.has(id)) {
+			let resolve: () => void;
+			const promise = new Promise<void>((r) => {
+				resolve = r;
+			});
+			inFlightFetches.set(id, promise);
+			resolvers.push(resolve!);
+		}
+	}
+
 	// Fetch from OMDb for each term
 	const omdbById = new Map<string, Movie>();
 	const originalQueryResults: Movie[] = []; // Only results from original query (for freshness)
@@ -326,6 +345,14 @@ export async function fetchPostersAndMerge(
 		);
 	}
 
+	// Resolve in-flight promises and clean up
+	for (const resolve of resolvers) {
+		resolve();
+	}
+	for (const id of idsBeingFetched) {
+		inFlightFetches.delete(id);
+	}
+
 	return { movies: updatedMovies, newFromOMDb };
 }
 
@@ -338,16 +365,32 @@ export function resetQueryCache(): void {
 
 /**
  * Fetch poster for a single movie by IMDb ID.
- * Used when selecting a movie that hasn't had its poster fetched yet.
+ * Waits for any in-flight autocomplete fetches before doing its own lookup.
  */
 export async function fetchPosterById(imdbID: string): Promise<string | null> {
 	// Check cache first
-	const cached = getCachedPoster(imdbID);
+	let cached = getCachedPoster(imdbID);
 	if (cached !== undefined) {
 		console.log(`[Poster] ${imdbID} already cached: ${cached ? '🖼️' : '❌'}`);
 		return cached;
 	}
 
+	// If autocomplete is already fetching this ID, wait for it
+	const inFlight = inFlightFetches.get(imdbID);
+	if (inFlight) {
+		console.log(`[Poster] ${imdbID} already being fetched by autocomplete, waiting...`);
+		await inFlight;
+		// Check cache again - autocomplete may have found it
+		cached = getCachedPoster(imdbID);
+		if (cached !== undefined) {
+			console.log(`[Poster] ${imdbID} now cached from autocomplete: ${cached ? '🖼️' : '❌'}`);
+			return cached;
+		}
+		// Autocomplete didn't find it - fall through to ID lookup
+		console.log(`[Poster] ${imdbID} not found by autocomplete, doing ID lookup`);
+	}
+
+	// Fetch by ID (fallback when autocomplete search didn't find it)
 	console.log(`[Poster] Fetching poster by ID: ${imdbID}`);
 	try {
 		const response = await fetch(`/api/movies/resolve?i=${encodeURIComponent(imdbID)}`);
@@ -358,7 +401,6 @@ export async function fetchPosterById(imdbID: string): Promise<string | null> {
 			console.log(`[Poster] ${imdbID} fetched: 🖼️`);
 			return result.movie.poster;
 		} else {
-			// Cache as null so we don't retry
 			cachePoster(imdbID, null);
 			console.log(`[Poster] ${imdbID} has no poster`);
 			return null;

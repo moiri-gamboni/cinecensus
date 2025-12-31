@@ -6,7 +6,7 @@
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { cn } from '$lib/utils.js';
 	import { formatVotes } from '$lib/utils/format';
-	import { getCachedPoster } from '$lib/utils/poster-fetch';
+	import { getCachedPoster, fetchPosterById } from '$lib/utils/poster-fetch';
 	import type { Movie } from '$lib/types/poll';
 
 	interface Props {
@@ -18,27 +18,30 @@
 
 	let { movie, onremove, showRemove = false, compact = false }: Props = $props();
 
-	// Check cache for poster if not provided (handles selection before poster loads)
-	// undefined = not in cache (might be fetching), null = confirmed no poster, string = has poster
-	let cacheResult = $state<string | null | undefined>(undefined);
+	// Fetch poster if not provided (handles selection before poster loads)
+	// undefined = fetching, null = confirmed no poster, string = has poster
+	let fetchedPoster = $state<string | null | undefined>(undefined);
 
 	$effect(() => {
-		// If no poster from props, check cache periodically
 		if (!movie.poster) {
-			const checkCache = () => {
-				const cached = getCachedPoster(movie.imdbID);
-				cacheResult = cached;
-			};
-			checkCache(); // Check immediately
-			// Re-check after poster fetch likely completes (only if still waiting)
-			const timer = setTimeout(checkCache, 1000);
-			return () => clearTimeout(timer);
+			// Check cache first
+			const cached = getCachedPoster(movie.imdbID);
+			if (cached !== undefined) {
+				fetchedPoster = cached;
+				return;
+			}
+
+			// Not in cache - fetch it
+			fetchedPoster = undefined; // Show loader
+			fetchPosterById(movie.imdbID).then((poster) => {
+				fetchedPoster = poster;
+			});
 		}
 	});
 
-	const poster = $derived(movie.poster ?? (cacheResult || null));
-	// Show loader if no poster from props AND cache hasn't confirmed null
-	const isLoading = $derived(!movie.poster && cacheResult === undefined);
+	const poster = $derived(movie.poster ?? (fetchedPoster || null));
+	// Show loader if no poster from props AND still fetching
+	const isLoading = $derived(!movie.poster && fetchedPoster === undefined);
 </script>
 
 <div class="group relative">

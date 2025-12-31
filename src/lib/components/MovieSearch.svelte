@@ -152,44 +152,31 @@
 		searchLocal(value);
 	}
 
-	async function handleSelect(movie: MovieWithRating) {
-		console.log(`[Search] handleSelect START for "${movie.title}" (currentQuery="${currentQuery}", timer=${!!posterDebounceTimer})`);
+	function handleSelect(movie: MovieWithRating) {
+		console.log(`[Search] handleSelect for "${movie.title}"`);
 
-		// Cancel any pending poster fetch and mark query as stale to prevent race conditions
+		// Cancel any pending poster fetch
 		if (posterDebounceTimer) {
 			clearTimeout(posterDebounceTimer);
 			posterDebounceTimer = null;
-			console.log(`[Search] handleSelect: cancelled pending poster timer`);
 		}
-		currentQuery = ''; // Prevents any in-flight fetches from updating results
+		currentQuery = '';
 
-		// Fetch movie details (poster + plot) if not already cached
+		// Use cached data if available, otherwise pass null (MovieCard will fetch)
 		const cachedPoster = getCachedPoster(movie.imdbID);
 		const cachedPlot = getCachedPlot(movie.imdbID);
 
-		let enrichedMovie = { ...movie };
+		const enrichedMovie = {
+			...movie,
+			poster: cachedPoster ?? null,
+			plot: cachedPlot ?? undefined
+		};
 
-		if (cachedPoster !== undefined && cachedPlot !== undefined) {
-			// Both cached, use cached values
-			enrichedMovie.poster = cachedPoster;
-			enrichedMovie.plot = cachedPlot ?? undefined;
-			console.log(`[Search] handleSelect: using cached data`);
-		} else {
-			// Fetch details (this caches both poster and plot)
-			console.log(`[Search] handleSelect: fetching details (await starts)`);
-			const details = await fetchMovieDetailsById(movie.imdbID);
-			console.log(`[Search] handleSelect: fetching details (await ends, currentQuery="${currentQuery}")`);
-			enrichedMovie.poster = details.poster;
-			enrichedMovie.plot = details.plot ?? undefined;
-		}
-
-		// Keep rating and votes for display in MovieCard
-		console.log(`[Search] handleSelect: calling onselect, clearing state`);
+		// Select immediately - MovieCard will fetch poster if needed
 		onselect(enrichedMovie);
 		searchQuery = '';
 		results = [];
 		resetQueryCache();
-		console.log(`[Search] handleSelect END (results.length=${results.length})`);
 	}
 </script>
 
