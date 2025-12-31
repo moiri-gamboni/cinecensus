@@ -71,6 +71,10 @@
 	<footer class="border-t border-border/40 py-6 text-center text-sm text-muted-foreground">
 		<p class="mb-2">Create movie polls and vote with friends</p>
 		<div class="flex items-center justify-center gap-4">
+			<a href="/privacy" class="hover:text-foreground transition-colors">
+				Privacy
+			</a>
+			<span class="text-border">•</span>
 			<a
 				href="https://github.com/moiri-gamboni/cinecensus/issues/new/choose"
 				target="_blank"
