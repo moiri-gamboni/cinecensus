@@ -402,3 +402,73 @@ export async function fetchMovieDetailsById(
 		return { poster: null, plot: null };
 	}
 }
+
+/**
+ * Fetch and update missing plots for movies in a poll.
+ * Checks localStorage first, then fetches from OMDb if needed.
+ * Updates both localStorage and the database.
+ * Returns updated movies array.
+ */
+export async function fetchMissingPlots(
+	pollId: string,
+	movies: Movie[]
+): Promise<Movie[]> {
+	const moviesNeedingPlots = movies.filter((m) => !m.plot);
+
+	if (moviesNeedingPlots.length === 0) {
+		return movies;
+	}
+
+	console.log(`[Plots] ${moviesNeedingPlots.length} movies need plots`);
+
+	const updatedMovies = [...movies];
+
+	await Promise.all(
+		moviesNeedingPlots.map(async (movie) => {
+			// Check localStorage first
+			const cachedPlot = getCachedPlot(movie.imdbID);
+
+			let plot: string | null = null;
+			let poster: string | null = null;
+
+			if (cachedPlot !== undefined) {
+				console.log(`[Plots] ${movie.imdbID} plot from cache`);
+				plot = cachedPlot;
+			} else {
+				// Fetch from OMDb
+				const details = await fetchMovieDetailsById(movie.imdbID);
+				plot = details.plot;
+				poster = details.poster;
+			}
+
+			if (plot) {
+				// Update local array
+				const idx = updatedMovies.findIndex((m) => m.imdbID === movie.imdbID);
+				if (idx !== -1) {
+					updatedMovies[idx] = { ...updatedMovies[idx], plot };
+					if (poster && !updatedMovies[idx].poster) {
+						updatedMovies[idx].poster = poster;
+					}
+				}
+
+				// Update database
+				try {
+					await fetch(`/api/polls/${pollId}/movie-plot`, {
+						method: 'PATCH',
+						headers: { 'Content-Type': 'application/json' },
+						body: JSON.stringify({
+							imdbID: movie.imdbID,
+							plot,
+							...(poster && !movie.poster && { poster })
+						})
+					});
+					console.log(`[Plots] ${movie.imdbID} updated in database`);
+				} catch (err) {
+					console.error(`[Plots] Failed to update ${movie.imdbID} in database:`, err);
+				}
+			}
+		})
+	);
+
+	return updatedMovies;
+}

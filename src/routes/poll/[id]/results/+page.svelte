@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { goto } from '$app/navigation';
 	import Share2 from '@lucide/svelte/icons/share-2';
 	import Check from '@lucide/svelte/icons/check';
 	import ArrowLeft from '@lucide/svelte/icons/arrow-left';
@@ -14,11 +13,22 @@
 		RankedResults,
 		RatingResults
 	} from '$lib/components/results/index.js';
-	import type { ApprovalResult, SingleResult, RankedResult, RatingResult } from '$lib/types/poll';
+	import { fetchMissingPlots } from '$lib/utils/poster-fetch';
+	import type { ApprovalResult, SingleResult, RankedResult, RatingResult, Movie } from '$lib/types/poll';
 
 	let { data } = $props();
 
 	let copied = $state(false);
+
+	// Movies with plots filled in from cache/API
+	let movies = $state<Movie[]>(data.poll.movies);
+
+	// Fetch missing plots on mount (updates database for future loads)
+	$effect(() => {
+		fetchMissingPlots(data.poll.id, data.poll.movies).then((updated) => {
+			movies = updated;
+		});
+	});
 
 	const methodLabels = {
 		approval: 'Approval Voting',
@@ -105,7 +115,7 @@
 			{:else if data.results.method === 'ranked'}
 				<RankedResults
 					results={data.results.results as RankedResult}
-					movies={data.poll.movies}
+					{movies}
 					voteCount={data.voteCount}
 				/>
 			{:else if data.results.method === 'rating'}

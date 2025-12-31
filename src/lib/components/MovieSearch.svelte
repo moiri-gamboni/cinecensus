@@ -10,11 +10,12 @@
 
 	interface Props {
 		onselect: (movie: Movie) => void;
+		onupdate?: (movie: Movie) => void;
 		placeholder?: string;
 		excludeIds?: string[];
 	}
 
-	let { onselect, placeholder = 'Search movies...', excludeIds = [] }: Props = $props();
+	let { onselect, onupdate, placeholder = 'Search movies...', excludeIds = [] }: Props = $props();
 
 	let searchQuery = $state('');
 	let results = $state<MovieWithRating[]>([]);
@@ -150,9 +151,13 @@
 		const cachedPoster = getCachedPoster(movie.imdbID);
 		const cachedPlot = getCachedPlot(movie.imdbID);
 
-		const enrichedMovie = {
-			...movie,
+		const enrichedMovie: Movie = {
+			imdbID: movie.imdbID,
+			title: movie.title,
+			year: movie.year,
 			poster: cachedPoster ?? null,
+			rating: movie.rating,
+			votes: movie.votes,
 			plot: cachedPlot ?? undefined
 		};
 
@@ -161,6 +166,19 @@
 		searchQuery = '';
 		results = [];
 		resetQueryCache();
+
+		// Fetch plot in background if not cached and onupdate provided
+		if (cachedPlot === undefined && onupdate) {
+			fetchMovieDetailsById(movie.imdbID).then(({ poster, plot }) => {
+				if (plot) {
+					onupdate({
+						...enrichedMovie,
+						poster: poster ?? enrichedMovie.poster,
+						plot
+					});
+				}
+			});
+		}
 	}
 </script>
 

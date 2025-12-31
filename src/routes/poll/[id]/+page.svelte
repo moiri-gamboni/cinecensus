@@ -13,9 +13,20 @@
 	import * as Card from '$lib/components/ui/card/index.js';
 	import { ApprovalVoting, SingleVoting, RankedVoting, RatingVoting } from '$lib/components/voting/index.js';
 	import { votedPolls } from '$lib/stores/poll-ownership.svelte.js';
-	import type { ApprovalVoteData, SingleVoteData, RankedVoteData, RatingVoteData } from '$lib/types/poll';
+	import { fetchMissingPlots } from '$lib/utils/poster-fetch';
+	import type { ApprovalVoteData, SingleVoteData, RankedVoteData, RatingVoteData, Movie } from '$lib/types/poll';
 
 	let { data } = $props();
+
+	// Movies with plots filled in from cache/API
+	let movies = $state<Movie[]>(data.poll.movies);
+
+	// Fetch missing plots on mount
+	$effect(() => {
+		fetchMissingPlots(data.poll.id, data.poll.movies).then((updated) => {
+			movies = updated;
+		});
+	});
 
 	let submitting = $state(false);
 	let copied = $state(false);
@@ -59,9 +70,9 @@
 			case 'single':
 				return singleVote !== '';
 			case 'ranked':
-				return rankedVote.length === data.poll.movies.length;
+				return rankedVote.length === movies.length;
 			case 'rating':
-				return Object.keys(ratingVote).length === data.poll.movies.length;
+				return Object.keys(ratingVote).length === movies.length;
 		}
 	});
 
@@ -93,7 +104,7 @@
 			<div class="mt-2 flex items-center gap-2">
 				<Badge variant="secondary">{methodLabels[data.poll.voting_method]}</Badge>
 				<span class="text-sm text-muted-foreground">
-					{data.poll.movies.length} movies
+					{movies.length} movies
 				</span>
 			</div>
 		</div>
@@ -143,28 +154,28 @@
 		<Card.Content>
 			{#if data.poll.voting_method === 'approval'}
 				<ApprovalVoting
-					movies={data.poll.movies}
+					{movies}
 					value={approvalVote}
 					onchange={(v) => (approvalVote = v)}
 					disabled={submitting}
 				/>
 			{:else if data.poll.voting_method === 'single'}
 				<SingleVoting
-					movies={data.poll.movies}
+					{movies}
 					value={singleVote}
 					onchange={(v) => (singleVote = v)}
 					disabled={submitting}
 				/>
 			{:else if data.poll.voting_method === 'ranked'}
 				<RankedVoting
-					movies={data.poll.movies}
+					{movies}
 					value={rankedVote}
 					onchange={(v) => (rankedVote = v)}
 					disabled={submitting}
 				/>
 			{:else}
 				<RatingVoting
-					movies={data.poll.movies}
+					{movies}
 					value={ratingVote}
 					onchange={(v) => (ratingVote = v)}
 					disabled={submitting}

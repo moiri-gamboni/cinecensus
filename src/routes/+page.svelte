@@ -33,6 +33,10 @@
 		}
 	}
 
+	function updateMovie(movie: Movie) {
+		movies = movies.map((m) => (m.imdbID === movie.imdbID ? movie : m));
+	}
+
 	function removeMovie(imdbID: string) {
 		movies = movies.filter((m) => m.imdbID !== imdbID);
 	}
@@ -121,6 +125,7 @@
 					<div class="order-2">
 						<MovieSearch
 							onselect={addMovie}
+							onupdate={updateMovie}
 							excludeIds={excludeIds}
 							placeholder="Search and add movies..."
 						/>
