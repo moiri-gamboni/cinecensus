@@ -45,10 +45,15 @@ export const load: PageServerLoad = async ({ params, cookies, platform }) => {
 	// }
 
 	// Get all votes
-	const { data: votes } = await supabase
+	const { data: votes, error: votesError } = await supabase
 		.from('votes')
 		.select('vote_data')
 		.eq('poll_id', params.id);
+
+	if (votesError) {
+		console.error('Failed to fetch votes:', votesError);
+		throw error(500, 'Failed to load poll results');
+	}
 
 	const typedPoll = poll as Poll;
 	const results = tallyVotes(typedPoll.voting_method, typedPoll.movies, votes || []);
