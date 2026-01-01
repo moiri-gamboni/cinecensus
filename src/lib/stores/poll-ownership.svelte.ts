@@ -5,8 +5,14 @@ const VOTED_KEY = 'cinecensus_voted_polls';
 
 function getOwnedPolls(): string[] {
 	if (!browser) return [];
-	const stored = localStorage.getItem(STORAGE_KEY);
-	return stored ? JSON.parse(stored) : [];
+	try {
+		const stored = localStorage.getItem(STORAGE_KEY);
+		return stored ? JSON.parse(stored) : [];
+	} catch {
+		// Clear corrupted data
+		localStorage.removeItem(STORAGE_KEY);
+		return [];
+	}
 }
 
 function addOwnedPoll(pollId: string): void {
@@ -24,8 +30,14 @@ function isOwnedPoll(pollId: string): boolean {
 
 function getVotedPolls(): string[] {
 	if (!browser) return [];
-	const stored = localStorage.getItem(VOTED_KEY);
-	return stored ? JSON.parse(stored) : [];
+	try {
+		const stored = localStorage.getItem(VOTED_KEY);
+		return stored ? JSON.parse(stored) : [];
+	} catch {
+		// Clear corrupted data
+		localStorage.removeItem(VOTED_KEY);
+		return [];
+	}
 }
 
 function addVotedPoll(pollId: string): void {
