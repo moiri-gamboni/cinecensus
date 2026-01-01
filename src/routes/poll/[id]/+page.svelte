@@ -19,7 +19,8 @@
 	let { data } = $props();
 
 	// Movies with plots filled in from cache/API
-	let movies = $state<Movie[]>(data.poll.movies);
+	// Using untrack since we intentionally initialize once and update via fetchMissingPlots
+	let movies = $state<Movie[]>(untrack(() => data.poll.movies));
 
 	// Fetch missing plots on mount
 	$effect(() => {

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { untrack } from 'svelte';
 	import Share2 from '@lucide/svelte/icons/share-2';
 	import Check from '@lucide/svelte/icons/check';
 	import ArrowLeft from '@lucide/svelte/icons/arrow-left';
@@ -21,7 +22,8 @@
 	let copied = $state(false);
 
 	// Movies with plots filled in from cache/API
-	let movies = $state<Movie[]>(data.poll.movies);
+	// Using untrack since we intentionally initialize once and update via fetchMissingPlots
+	let movies = $state<Movie[]>(untrack(() => data.poll.movies));
 
 	// Fetch missing plots on mount (updates database for future loads)
 	$effect(() => {
