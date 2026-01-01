@@ -1,3 +1,4 @@
+import { dev } from '$app/environment';
 import { error, redirect } from '@sveltejs/kit';
 import { createClient } from '@supabase/supabase-js';
 import type { PageServerLoad, Actions } from './$types';
@@ -65,7 +66,12 @@ export const actions: Actions = {
 			throw error(400, 'Vote data required');
 		}
 
-		const voteData = JSON.parse(voteDataStr);
+		let voteData: unknown;
+		try {
+			voteData = JSON.parse(voteDataStr);
+		} catch {
+			throw error(400, 'Invalid vote data format');
+		}
 
 		// Get or create fingerprint
 		let fingerprint = cookies.get('voter_fingerprint');
@@ -75,6 +81,7 @@ export const actions: Actions = {
 			cookies.set('voter_fingerprint', fingerprint, {
 				path: '/',
 				httpOnly: true,
+				secure: !dev,
 				sameSite: 'lax',
 				maxAge: 60 * 60 * 24 * 365 // 1 year
 			});
